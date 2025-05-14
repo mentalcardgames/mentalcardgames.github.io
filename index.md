@@ -17,3 +17,7 @@ hero:
       text: Contribute
       link: /contribute
 ---
+
+# What are Mental Card Games?
+
+Good question, how about some documentation?
