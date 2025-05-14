@@ -8,11 +8,9 @@ hero:
   tagline: Card Games, but we're mental
   actions:
     - theme: brand
-      text: Markdown Examples
-      link: /markdown-examples
+      text: Cone
+      link: https://cone.informatik.uni-freiburg.de/tea/projects-and-theses-2025
     - theme: alt
       text: API Examples
       link: /api-examples
 ---
-
-# Links
