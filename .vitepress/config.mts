@@ -8,14 +8,18 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: "Home", link: "/" },
-      { text: "Examples", link: "/markdown-examples" },
-      { text: "Contribute", link: "/contribute" },
+      { text: "Docs", link: "/docs" },
     ],
 
     sidebar: [
       {
-        text: "Examples",
-        items: [{ text: "Markdown Examples", link: "/markdown-examples" }],
+        text: "Docs",
+        items: [
+          {
+            text: "About",
+            link: "/about",
+          },
+        ],
       },
       {
         text: "Organisational",
@@ -23,6 +27,10 @@ export default defineConfig({
           { text: "Platforms", link: "/organisational/platforms" },
           { text: "Contribute", link: "/organisational/contribute" },
         ],
+      },
+      {
+        text: "Examples",
+        items: [{ text: "Markdown Examples", link: "/markdown-examples" }],
       },
     ],
     search: {

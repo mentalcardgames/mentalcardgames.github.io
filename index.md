@@ -11,6 +11,9 @@ hero:
       text: Cone
       link: https://cone.informatik.uni-freiburg.de/tea/projects-and-theses-2025
     - theme: alt
+      text: Docs
+      link: /about
+    - theme: alt
       text: Contribute
       link: /contribute
 ---
