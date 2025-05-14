@@ -12,3 +12,5 @@ Write your documentation in markdown anywhere in this repo, add the path
 somewhere in `.vitepress/config` either in navbar or sidebar. It will
 automatically be indexed for search. Commit your changes to the main branch and
 the website will automatically be redeployed.
+
+Take a look at these [Examples](/markdown-examples) to see what features are available.
