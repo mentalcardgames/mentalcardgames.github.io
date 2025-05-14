@@ -1,5 +1,9 @@
-Info
+# Info
 
+Information and data on mental card games is spread across a few different
+places.
+
+# Platforms
 
 ## Cone
 
