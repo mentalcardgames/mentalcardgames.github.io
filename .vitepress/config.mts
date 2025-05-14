@@ -19,7 +19,10 @@ export default defineConfig({
       },
       {
         text: "Organisational",
-        items: [{ text: "Contribute", link: "/contribute" }],
+        items: [
+          { text: "Platforms", link: "/organisational/platforms" },
+          { text: "Contribute", link: "/organisational/contribute" },
+        ],
       },
     ],
     search: {
