@@ -25,6 +25,15 @@ export default defineConfig({
         ],
       },
       {
+        text: "Project",
+        items: [
+          {
+            text: "Architecture",
+            link: "/architecture",
+          },
+        ],
+      },
+      {
         text: "Organisational",
         items: [
           { text: "Platforms", link: "/organisational/platforms" },
