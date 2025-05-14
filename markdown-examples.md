@@ -32,6 +32,13 @@ export default {
 }
 ```
 
+
+## Math
+
+$$\frac{\text{there is}}{\text{Math}}$$
+
+This $i \sum \cdot v$ery nice!
+
 ## Custom Containers
 
 **Input**

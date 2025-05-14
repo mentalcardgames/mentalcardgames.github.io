@@ -2,6 +2,9 @@ import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  markdown: {
+    math: true,
+  },
   title: "mental card games",
   description: "Mental Card Games Documentation",
   themeConfig: {
