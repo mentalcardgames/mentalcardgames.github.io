@@ -15,7 +15,7 @@ hero:
       link: /about
     - theme: alt
       text: Contribute
-      link: /contribute
+      link: /organisational/contribute
 ---
 
 # What are Mental Card Games?

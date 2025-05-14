@@ -1,3 +1,5 @@
 # What are mental Card Games?
 
-Good question
+
+
+[Schindelhauer Paper on the topic](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=TxVfH8QAAAAJ&cstart=20&pagesize=80&citation_for_view=TxVfH8QAAAAJ:_kc_bZDykSQC)
