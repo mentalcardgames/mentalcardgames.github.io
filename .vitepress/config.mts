@@ -26,6 +26,7 @@ export default defineConfig({
         items: [
           { text: "Platforms", link: "/organisational/platforms" },
           { text: "Contribute", link: "/organisational/contribute" },
+          { text: "People", link: "/organisational/people" },
         ],
       },
       {
