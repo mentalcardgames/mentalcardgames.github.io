@@ -4,7 +4,7 @@ outline: deep
 
 # Contribute
 
-This page uses [vitepress](https://vitepress.dev)
+This page uses [Vitepress](https://vitepress.dev)
 
 # TLDR;
 
