@@ -37,3 +37,14 @@ As of now code is spread across multiple Repos under multiple accounts as of now
 these to this GitHub repo would be nice, and since we're not currently aiming
 for a microservice architecture, ideally at some point all code uses the same
 tech stack and lives in the same repo.
+
+## Known external repos
+
+- https://github.com/gSys1337/mcg_visual
+- https://github.com/gSys1337/mcg_visual_wasm_template
+
+::: tip
+If you are in posession of or know of a repo containing MCG related code, either
+add it here or move it to the [GitHub org](https://github.com/mentalcardgames).
+:::
+
