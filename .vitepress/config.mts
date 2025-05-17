@@ -9,6 +9,9 @@ export default defineConfig({
   description: "Mental Card Games Documentation",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
+    editLink: {
+      pattern: 'https://github.com/mentalcardgames/mentalcardgames.github.io/edit/main/docs/:path'
+    },
     nav: [
       { text: "Home", link: "/" },
       { text: "Docs", link: "/about" },
