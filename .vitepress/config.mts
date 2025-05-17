@@ -10,7 +10,7 @@ export default defineConfig({
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     editLink: {
-      pattern: 'https://github.com/mentalcardgames/mentalcardgames.github.io/edit/main/docs/:path'
+      pattern: 'https://github.com/mentalcardgames/mentalcardgames.github.io/edit/main/:path'
     },
     nav: [
       { text: "Home", link: "/" },
