@@ -42,6 +42,7 @@ tech stack and lives in the same repo.
 
 - https://github.com/gSys1337/mcg_visual
 - https://github.com/gSys1337/mcg_visual_wasm_template
+ - example
 
 ::: tip
 If you are in posession of or know of a repo containing MCG related code, either
