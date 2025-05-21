@@ -31,6 +31,10 @@ export default defineConfig({
             text: "Architecture",
             link: "/architecture",
           },
+          {
+            text: "DSL",
+            link: "/project/dsl",
+          },
         ],
       },
       {
