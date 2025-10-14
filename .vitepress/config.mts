@@ -44,7 +44,6 @@ export default defineConfig({
       {
         text: "Organisational",
         items: [
-          { text: "Platforms", link: "/organisational/platforms" },
           { text: "Contribute", link: "/organisational/contribute" },
           { text: "People", link: "/organisational/people" },
         ],
@@ -52,6 +51,12 @@ export default defineConfig({
       {
         text: "Examples",
         items: [{ text: "Markdown Examples", link: "/markdown-examples" }],
+      },
+      {
+        text: "Archive",
+        items: [
+          { text: "Platform considerations", link: "/archive/platforms" },
+        ],
       },
     ],
     search: {

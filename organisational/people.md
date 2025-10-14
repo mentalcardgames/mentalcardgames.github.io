@@ -2,14 +2,11 @@
 
 ## [@paperbenni](https://github.com/paperbenni)
 
-Interested in Bachelor-Project on MCG.
-Currently looking at
-- Rust P2P
-- QR-Code Communication
+Bachelor Project
+"Peer-to-Peer communication for Mental Card Games"
 
-I created this page, though I'm aiming for anyone who does MCG at ALU to be able
-to edit it.
-
-## Other
-
-//TODO
+- I created the current [mcg monorepo](https://github.com/mentalcardgames/mcg)
+  and architecture of the Rust implementation of the project
+- Feel free to reach out for questions
+- I created the docs website, but I aim for anyone in the project to be able to
+  edit it. There's an edit button at every page on the lower left. 

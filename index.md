@@ -17,6 +17,9 @@ hero:
       link: /organisational/contribute
   image: /logo.png
 features:
+  - icon: 🏫
+    title: About
+    details: This is a project of the Albert-Ludwigs-Universität Freiburg, Germany
   - icon: 📄
     title: Paper
     details: Schindelhauer paper detailing what Mental Card Games are which provides the theoretical framework for what is being built here.
