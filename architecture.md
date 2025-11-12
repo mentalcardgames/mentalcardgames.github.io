@@ -6,26 +6,55 @@ The project is written in Rust.
 
 ## Monorepo
 
-Rust has excellent support for monorepos. Multiple crates can be kept in the
-same repo. This ensures projects can interact without regularly breaking each
-other. I do not want to implement the entire card game just to implement
-serialization of its data. I also do not want anyone to write a serializer for
-data that my card game does not output or know how to process.
+The project lives in a monorepo. This keeps it from diverging into a
+dysfunctional/incompatible state without anyone noticing. It also makes it easy
+to share code between the frontend and backend
 
-## WASM
-
-The target platform is WebAssembly.
-WebAssembly is a binary instruction format that can be executed by modern web browsers.
-
-## Egui
-
-Egui is implemented entirely in Rust and has very few outside dependencies.
-Even though it can run in a browser, it does not utilize the DOM and instead draws the entire UI by itself. That means it is very portable and the app could be ported to Desktop, native mobile platforms or basically any other Rust target which has basic IO and a canvas like element.
+More information: https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html
 
 
-## Why
+## Frontend
 
+The frontend is targeting WASM, so it can run in a browser. It is wrapped in a
+thin piece of HTML/JavaScript which gets served to the browser and makes the
+browser request and start the RUST WASM library which contains the actual
+frontend. The frontend is being rendered to a canvas element. 
+It communicates with the backend over a websocket, meaning it can display the
+game state in real time. Communication is obviously bidirectional, so the
+Frontend can pass the player actions to the backend. 
+
+NO GAME OR BUSINESS LOGIC IS ON THE FRONTEND
+
+The frontend is a small and thin function which does $\text{Game State} \to \text{Pretty
+Pictures}$. It also only uses Websockets to communicate with the backend. Nothing
+else. The frontend **only** talks to its own backend, not other backends or
+frontends. All the P2P decentralized communication happens between instances of
+the backend. 
+
+## Backend
+
+This contains the actual game logic. It verifies and enforces the rules of the
+game. Each player has their own instance of this. The instances of this
+communicate with each other, but not with each other's frontends. The backend
+also does cryptography and anything computationally expensive or multithreaded.
+It is meant to allow for different Transport layers and mediums. Most of its
+logic is transport agnostic. Right now it supports websocket, HTTP and iroh. It
+supports all of these at the same time, meaning one player might be
+communicating over websocket, another one over iroh. Communication with the CLI
+and the frontend is already working very well. Communication with other
+instances of the backend is a work in progress. The backend is transport
+agnostic to allow for exotic kinds of communication, be that sound or QR codes
+or gestures measured with a Gyroscope. This is a somewhat scientific project
+after all. 
+
+## CLI
+
+The CLI is meant to test out the functionality of the backend without being a
+full blown instance of MCG. The endpoints it contacts are meant to eventually
+become the peer to peer implementation
 This outlines a comparison of different platforms and their pros and cons.
+
+## Comparison of Different Platforms
 
 ### Linux
 
