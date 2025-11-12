@@ -1,11 +1,8 @@
 # Architecture
 
-There is no unified tech-stack yet. This outlines some different ideas.
-Except for Rust, none of this is set in stone yet.
-
 ## Rust
 
-Rust is convenient, safe and fast, and fun to use. We're using it :)
+The project is written in Rust.
 
 ## Monorepo
 
@@ -15,16 +12,20 @@ other. I do not want to implement the entire card game just to implement
 serialization of its data. I also do not want anyone to write a serializer for
 data that my card game does not output or know how to process.
 
-This will make the project quite big, but `sccache` can be used to ensure
-compile times stay fast.
+## WASM
+
+The target platform is WebAssembly.
+WebAssembly is a binary instruction format that can be executed by modern web browsers.
+
+## Egui
+
+Egui is implemented entirely in Rust and has very few outside dependencies.
+Even though it can run in a browser, it does not utilize the DOM and instead draws the entire UI by itself. That means it is very portable and the app could be ported to Desktop, native mobile platforms or basically any other Rust target which has basic IO and a canvas like element.
 
 
+## Why
 
-## Target Platform
-
-- Web?
-- Android?
-- Linux?
+This outlines a comparison of different platforms and their pros and cons.
 
 ### Linux
 
