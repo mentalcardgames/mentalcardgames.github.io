@@ -95,3 +95,39 @@ This outlines a comparison of different platforms and their pros and cons.
 ### MacOS
 
 - No
+
+## Test if mermaid works
+
+```mermaid
+flowchart LR
+    main[main.rs]
+    run[run_server]
+    router[build_router]
+    iroh[spawn_iroh_listener]
+    bot_driver[run_bot_driver]
+    main --> run
+    run --> router
+    run --> iroh
+    run --> bot_driver
+    subgraph state [AppState]
+        lobby[Lobby]
+        broadcaster[broadcaster]
+        config[config]
+    end
+    subgraph transports [Transports]
+        http[HTTP]
+        ws[WebSocket]
+        iroh_conn[Iroh]
+    end
+    router --> http
+    router --> ws
+    iroh --> iroh_conn
+    http --> dispatch[dispatch_client_message]
+    ws --> dispatch
+    iroh_conn --> dispatch
+    dispatch --> lobby
+    broadcaster --> ws
+    broadcaster --> iroh_conn
+    bot_driver --> lobby
+    bot_driver --> broadcaster
+```

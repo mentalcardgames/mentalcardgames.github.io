@@ -1,69 +1,72 @@
 import { defineConfig } from "vitepress";
+import { withMermaid } from 'vitepress-plugin-mermaid';
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
-  lastUpdated: true,
-  markdown: {
-    math: true,
-  },
-  title: "mental card games",
-  description: "Mental Card Games Documentation",
-  themeConfig: {
-    // https://vitepress.dev/reference/default-theme-config
-    editLink: {
-      pattern: 'https://github.com/mentalcardgames/mentalcardgames.github.io/edit/main/:path'
+export default withMermaid(
+  defineConfig({
+    lastUpdated: true,
+    markdown: {
+      math: true,
     },
-    nav: [
-      { text: "Home", link: "/" },
-      { text: "Docs", link: "/about" },
-    ],
+    title: "mental card games",
+    description: "Mental Card Games Documentation",
+    themeConfig: {
+      // https://vitepress.dev/reference/default-theme-config
+      editLink: {
+        pattern: 'https://github.com/mentalcardgames/mentalcardgames.github.io/edit/main/:path'
+      },
+      nav: [
+        { text: "Home", link: "/" },
+        { text: "Docs", link: "/about" },
+      ],
 
-    sidebar: [
-      {
-        text: "Docs",
-        items: [
-          {
-            text: "About",
-            link: "/about",
-          },
-        ],
+      sidebar: [
+        {
+          text: "Docs",
+          items: [
+            {
+              text: "About",
+              link: "/about",
+            },
+          ],
+        },
+        {
+          text: "Project",
+          items: [
+            {
+              text: "Architecture",
+              link: "/architecture",
+            },
+            {
+              text: "DSL",
+              link: "/project/dsl",
+            },
+          ],
+        },
+        {
+          text: "Organisational",
+          items: [
+            { text: "Contribute", link: "/organisational/contribute" },
+            { text: "People", link: "/organisational/people" },
+          ],
+        },
+        {
+          text: "Examples",
+          items: [{ text: "Markdown Examples", link: "/markdown-examples" }],
+        },
+        {
+          text: "Archive",
+          items: [
+            { text: "Platform considerations", link: "/archive/platforms" },
+          ],
+        },
+      ],
+      search: {
+        provider: "local",
       },
-      {
-        text: "Project",
-        items: [
-          {
-            text: "Architecture",
-            link: "/architecture",
-          },
-          {
-            text: "DSL",
-            link: "/project/dsl",
-          },
-        ],
-      },
-      {
-        text: "Organisational",
-        items: [
-          { text: "Contribute", link: "/organisational/contribute" },
-          { text: "People", link: "/organisational/people" },
-        ],
-      },
-      {
-        text: "Examples",
-        items: [{ text: "Markdown Examples", link: "/markdown-examples" }],
-      },
-      {
-        text: "Archive",
-        items: [
-          { text: "Platform considerations", link: "/archive/platforms" },
-        ],
-      },
-    ],
-    search: {
-      provider: "local",
+      socialLinks: [
+        { icon: "github", link: "https://github.com/mentalcardgames" },
+      ],
     },
-    socialLinks: [
-      { icon: "github", link: "https://github.com/mentalcardgames" },
-    ],
-  },
-});
+  })
+);
