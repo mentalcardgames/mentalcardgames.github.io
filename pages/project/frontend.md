@@ -12,49 +12,49 @@ The core interaction logic is built around a set of traits and structs that defi
 
 ### Key Traits
 
--   **`ScreenWidget`** @ [frontend/src/game/screens/mod.rs](../frontend/src/game/screens/mod.rs):
+-   **`ScreenWidget`** @ [frontend/src/game/screens/mod.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/screens/mod.rs):
     -   **Purpose**: Defines the **rendering logic** and behavior of a screen.
     -   **Usage**: Implement this trait to create new views (e.g., Main Menu, Game Setup). The `ui` method, called every frame, handles both logic updates and UI drawing.
     -   **Navigation**: Screens can request transitions to other screens via the `AppInterface` (passed as a parameter to `ui`). See [AppInterface](../frontend/src/game/screens/mod.rs).
 
--   **`ScreenDef`** @ [frontend/src/game/screens/mod.rs](../frontend/src/game/screens/mod.rs):
+-   **`ScreenDef`** @ [frontend/src/game/screens/mod.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/screens/mod.rs):
     -   **Purpose**: Defines the **metadata** and factory for a screen.
     -   **Usage**: Implement this to provide static information (path, display name, icon) and a constructor function. This allows the `ScreenRegistry` to list and instantiate screens dynamically.
 
--   **`CardEncoding`** @ [frontend/src/game/card.rs](../frontend/src/game/card.rs):
+-   **`CardEncoding`** @ [frontend/src/game/card.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/card.rs):
     -   **Purpose**: Acts as an interface to make custom types accessible as cards for mental card games in academia.
     -   **Usage**: Implement this in order to translate specific cards (e.g., Suit/Rank, ID) into an encoding used by mental card games. It provides operations like to both check whether a card is masked (face down) or open (face up) and to mask or unmask it.
 
--   **`CardConfig`** @ [frontend/src/game/card.rs](../frontend/src/game/card.rs):
+-   **`CardConfig`** @ [frontend/src/game/card.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/card.rs):
     -   **Purpose**: Defines the visual representation of a card.
     -   **Usage**: Implement this to tell the system how to render a card specifically. It maps the logical `CardEncoding` to an `egui::Image`.
 
--   **`FieldWidget`** @ [frontend/src/game/field.rs](../frontend/src/game/field.rs):
+-   **`FieldWidget`** @ [frontend/src/game/field.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/field.rs):
     -   **Purpose**: Defines a container that holds cards.
     -   **Usage**: Used to render areas where cards exist, such as a draw pile, discard pile, or a player's hand.
 
 ### Core Structs & Modules
 
--   **`App`** @ [frontend/src/game.rs](../frontend/src/game.rs):
+-   **`App`** @ [frontend/src/game.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game.rs):
     -   The main entry point that manages the registration and switching of `ScreenWidget`s via the `ScreenRegistry`.
     -   **Entry Point**: The `update` method (from the `eframe::App` trait) is the main loop where the application state is updated and the UI is rendered.
 
-- **`ClientState`** @ [frontend/src/store.rs](../frontend/src/store.rs):
+- **`ClientState`** @ [frontend/src/store.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/store.rs):
     - Holds the important state information of the client e.g. backend address, network messages, etc.
 
--   **`SimpleField`** @ [frontend/src/game/field.rs](../frontend/src/game/field.rs):
+-   **`SimpleField`** @ [frontend/src/game/field.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/field.rs):
     -   A full implementation of `FieldWidget`.
     -   **Purpose**: Serves as a default container for card storage.
     -   **Features**: Supports `Stack` (cards on top of each other) and `Horizontal` (cards side-by-side) layouts. Handles the drag-and-drop logic for cards within or between fields.
 
--   **`SimpleCard`** @ [frontend/src/game/card.rs](../frontend/src/game/card.rs):
+-   **`SimpleCard`** @ [frontend/src/game/card.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/card.rs):
     -   An implementation of `CardEncoding` that enumerate cards by a number and support masking and unmasking operations.
 
--   **`DirectoryCardType`** @ [frontend/src/game/card.rs](../frontend/src/game/card.rs):
+-   **`DirectoryCardType`** @ [frontend/src/game/card.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/card.rs):
     -   A full implementation of `CardConfig` used for `SimpleCard`.
     -   **Features**: Configuring a deck where card images are loaded from the backend at a specific directory.
 
--   **`hardcoded_cards`** (Module) @ [frontend/src/hardcoded_cards.rs](../frontend/src/hardcoded_cards.rs):
+-   **`hardcoded_cards`** (Module) @ [frontend/src/hardcoded_cards.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/hardcoded_cards.rs):
     -   **Purpose**: Provides factory functions to create pre-configured card decks (e.g., standard 52-card deck). This is not a struct but a helper module to easily instantiate `DirectoryCardType` with standard assets.
 
 ### Initialization & Lifecycle

@@ -20,31 +20,31 @@ The goal is to transmit arbitrary binary data (files, game state, crypto keys) b
 
 The `qr_comm` crate implements the math and data framing for this protocol.
 
--   **`Package`** @ [crates/qr_comm/src/data_structures/application_package.rs](../crates/qr_comm/src/data_structures/application_package.rs):
+-   **`Package`** @ [crates/qr_comm/src/data_structures/application_package.rs](https://github.com/mentalcardgames/mcg/blob/main/crates/qr_comm/src/data_structures/application_package.rs):
     -   **Purpose**: Represents the application-layer binary data holding files or messages.
     -   **Usage**: Wraps arbitrary data with its size. It provides methods to split the data into smaller, uniform `Fragment`s (`into_fragments`) and to re-assemble those fragments back into a full package (`from_fragments`).
 
--   **`Fragment`** @ [crates/qr_comm/src/data_structures/fragment.rs](../crates/qr_comm/src/data_structures/fragment.rs):
+-   **`Fragment`** @ [crates/qr_comm/src/data_structures/fragment.rs](https://github.com/mentalcardgames/mcg/blob/main/crates/qr_comm/src/data_structures/fragment.rs):
     -   **Purpose**: A fixed-size slice of a `Package`.
     -   **Usage**: The atomic unit over which math operations (like XOR and Galois field multiplication) are performed when generating combinations.
 
--   **`FrameFactor`** & **`Factor`** @ [crates/qr_comm/src/data_structures/factors.rs](../crates/qr_comm/src/data_structures/factors.rs):
+-   **`FrameFactor`** & **`Factor`** @ [crates/qr_comm/src/data_structures/factors.rs](https://github.com/mentalcardgames/mcg/blob/main/crates/qr_comm/src/data_structures/factors.rs):
     -   **Purpose**: Represents the set of mathematical multipliers (coding factors) used to create a linear combination of fragments. 
     -   **Usage**: Encodes which fragments are included in a specific `Frame` and with what weight.
 
--   **`Frame`** @ [crates/qr_comm/src/data_structures/frame.rs](../crates/qr_comm/src/data_structures/frame.rs):
+-   **`Frame`** @ [crates/qr_comm/src/data_structures/frame.rs](https://github.com/mentalcardgames/mcg/blob/main/crates/qr_comm/src/data_structures/frame.rs):
     -   **Purpose**: The wire format payload for a single QR Code.
     -   **Structure**: Consists of `FrameFactor`s (the coefficients), a `Fragment` (the mathematically combined payload), and a `FrameHeader` (metadata about the sender).
     -   **Usage**: This is the data structure that directly converts to and from a visual `qr_code::QrCode`.
 
--   **`Equation`** @ [crates/qr_comm/src/network_coding/equation.rs](../crates/qr_comm/src/network_coding/equation.rs):
+-   **`Equation`** @ [crates/qr_comm/src/network_coding/equation.rs](https://github.com/mentalcardgames/mcg/blob/main/crates/qr_comm/src/network_coding/equation.rs):
     -   **Purpose**: Represents a row in the decoding matrix. Internally pairs a `Factor` (abstract representation of `FrameFactor`) with a `Fragment`.
     -   **Usage**: Supports core math operations (Add, Sub, Mul, Div) in the Galois field for Gaussian elimination.
 
--   **`GaloisField2p4`** @ [crates/qr_comm/src/network_coding/galois.rs](../crates/qr_comm/src/network_coding/galois.rs):
+-   **`GaloisField2p4`** @ [crates/qr_comm/src/network_coding/galois.rs](https://github.com/mentalcardgames/mcg/blob/main/crates/qr_comm/src/network_coding/galois.rs):
     -   **Purpose**: Arithmetic constraint module ($GF(2^4)$). Ensures that all additions and multiplications of bytes wrap logically and stay within fixed bounds, keeping combinations fitting neatly into bytes.
 
--   **`Epoch`** @ [crates/qr_comm/src/network_coding/epoch.rs](../crates/qr_comm/src/network_coding/epoch.rs):
+-   **`Epoch`** @ [crates/qr_comm/src/network_coding/epoch.rs](https://github.com/mentalcardgames/mcg/blob/main/crates/qr_comm/src/network_coding/epoch.rs):
     -   **Purpose**: The core engine managing the transmission and reception state for a single session.
     -   **Usage**: 
         -   **Transmitter**: Receives `Package`s via `Epoch::write()`. Calling `Epoch::pop_recent_frame()` randomly generates network-coded `Frame`s based on the written fragments.
