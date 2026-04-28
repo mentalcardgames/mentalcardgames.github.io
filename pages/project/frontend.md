@@ -15,7 +15,7 @@ The core interaction logic is built around a set of traits and structs that defi
 -   **`ScreenWidget`** @ [frontend/src/game/screens/mod.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/screens/mod.rs):
     -   **Purpose**: Defines the **rendering logic** and behavior of a screen.
     -   **Usage**: Implement this trait to create new views (e.g., Main Menu, Game Setup). The `ui` method, called every frame, handles both logic updates and UI drawing.
-    -   **Navigation**: Screens can request transitions to other screens via the `AppInterface` (passed as a parameter to `ui`). See [AppInterface](../frontend/src/game/screens/mod.rs).
+    -   **Navigation**: Screens can request transitions to other screens via the `AppInterface` (passed as a parameter to `ui`). See [AppInterface](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/screens/mod.rs).
 
 -   **`ScreenDef`** @ [frontend/src/game/screens/mod.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/screens/mod.rs):
     -   **Purpose**: Defines the **metadata** and factory for a screen.
