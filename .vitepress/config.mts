@@ -37,6 +37,7 @@ export default withMermaid(
           link: "/project/",
           items: [
             { text: "Architecture", link: "/project/architecture" },
+            { text: "Modules", link: "/project/modules" },
             { text: "Backend", link: "/project/backend" },
             { text: "TUI", link: "/project/tui" },
             { text: "Game Engine", link: "/project/engine" },

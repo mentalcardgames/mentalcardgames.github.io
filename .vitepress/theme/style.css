@@ -1,0 +1,4 @@
+/* Invert the Excalidraw SVG in dark mode so the black text/lines become bright and readable */
+html.dark .vp-doc img[src$="Component-Architecture.svg"] {
+  filter: invert(0.93) hue-rotate(180deg);
+}
