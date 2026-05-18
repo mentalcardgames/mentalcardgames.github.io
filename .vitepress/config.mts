@@ -15,7 +15,7 @@ export default withMermaid(
     themeConfig: {
       // https://vitepress.dev/reference/default-theme-config
       editLink: {
-        pattern: 'https://github.com/mentalcardgames/mentalcardgames.github.io/edit/main/:path'
+        pattern: 'https://github.com/mentalcardgames/mentalcardgames.github.io/edit/main/pages/:path'
       },
       nav: [
         { text: "Home", link: "/" },
