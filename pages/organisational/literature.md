@@ -4,22 +4,16 @@ outline: deep
 
 # Literature & References
 
-All research and system development in this project is grounded in established scientific literature spanning cryptography, zero-knowledge proofs, distributed networks, and compiler design. This page describes how you can access scientific materials and lists the key foundational papers for each domain.
-
----
+All research and system development in this project is grounded in established scientific literature spanning cryptography, zero-knowledge proofs, distributed networks and compiler design. This page describes how you can access scientific materials and lists the key foundational papers for each domain.
 
 ## Accessing Scientific Literature
 
-Academic search engines, university resources, and our internal chair databases provide comprehensive access to card game cryptography research.
+Academic search engines, university resources and our internal NextCloud provide comprehensive access to relevant literature
 
-* **Internal Channels:** Key research papers, thesis templates, and reference materials are directly compiled and shared on the chair's internal channels (such as our Discord server, internal wiki, or shared group folders). Your supervisor will guide you to these direct files on onboarding.
-* **Shared Database:** We maintain a collaborative reference database (e.g., Zotero group library). You can request an invite from your supervisor to easily import citations into your thesis.
+* **Internal Channels:** Key research papers, thesis templates, and reference materials are directly compiled and shared on the chair's internal channels. Your supervisor will guide you to these files on onboarding.
 * **Academic Databases:** For general search, use:
   - [Google Scholar](https://scholar.google.com)
-  - [IACR Cryptology ePrint Archive](https://eprint.iacr.org) (for the latest preprints in cryptography)
   - [Freiburg University Library (FreiDok)](https://freidok.uni-freiburg.de) (for past completed theses from our chair)
-
----
 
 ## Foundational Literature by Topic
 

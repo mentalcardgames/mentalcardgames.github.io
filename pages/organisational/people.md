@@ -4,40 +4,30 @@ outline: deep
 
 # Active Registry (People)
 
-This page lists the active supervisors, maintainers, and researchers contributing to the Mental Card Games project. If you are a student working on the project, please coordinate with the team here to register your topic and ensure smooth integration with ongoing work.
+This page lists the active supervisors, maintainers and researchers contributing to the Mental Card Games project. If you are a student working on the project, please coordinate with the team here to register your topic and ensure smooth integration with ongoing work.
 
----
-
-## Academic Supervision & Management
+## Project Management & Supervision
 
 ### [@gSys](https://github.com/gSys1337)
-* **Role:** Project Manager & Researcher (since 03.2026)
-* **Background:** Bachelor Thesis on *[Design & implementation of a gossip-protocol for mental card games based on qr-codes](https://freidok.uni-freiburg.de/data/274306)*.
-* **Responsibilities:** Primary coordinator for student onboarding, thesis matching, code reviews, and architectural alignment. Feel free to reach out directly with topics and backlog inquiries.
-
----
-
-## Codebase Creators & Alumni
-
-### [@paperbenni](https://github.com/paperbenni)
-* **Role:** Founder & Crate Architect
-* **Background:** Bachelor Project on *Peer-to-Peer communication for Mental Card Games*.
-* **Contributions:** Created the initial [mcg monorepo](https://github.com/mentalcardgames/mcg), established the multi-actor tokio backend design, and launched this documentation site.
-
----
+* **Role:** Project Manager  (since 03.2026)
+* **Responsibilities:** Coordinator for student onboarding, project matching, code reviews, and architectural alignment. Feel free to reach out directly with topics and backlog inquiries.
 
 ## Active Student Registry
 
-To prevent merge conflicts in our shared monorepo and foster collaboration, we maintain a live registry of active student projects. Before starting code changes, ensure your active branch and technical milestone are coordinated here.
+To prevent merge conflicts in our shared monorepo and foster collaboration, we maintain a live registry of active student projects. Before starting code changes, ensure your active branch and topic are coordinated here.
 
 ### Registry Guidelines for Students
-1. **Coordination:** Coordinate with your supervisor to add your name, GitHub handle, branch prefix (e.g. `dev/yourname`), and active backlog milestones below.
-2. **Interface Changes:** If your milestone involves modifying files in `shared/` or changing communication protocols, proactive communication with other active students listed here is required.
-3. **Standup & Exchange:** Join our scheduled research chair project syncs to share status updates and coordinate integrations.
+1. **Coordination:** Coordinate with your supervisor to add your name, GitHub handle, branch prefix (e.g. `dev/yourname`), project scope and topics below.
+3. **Kick-off & Exchange:** Join our regular Mental Card Game Meeting to share status updates and coordinate integrations.
 
-| Student / GitHub | Active Branch | Backlog Milestones | Status |
-| :--- | :--- | :--- | :--- |
-| *Example Student* | `dev/example` | Milestone 1A (Engine Extraction) | Planning |
-| **You!** | `dev/yourname` | *Select your topic* | Onboarding |
+| Student / GitHub | Active Branch | Scope | Topic | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| [@paperbenni](https://github.com/paperbenni) | `dev/benjamin` | Bachelor Project | Peer-to-Peer Mental Poker | Finished |
+| [@tillh42](https://github.com/tillh42) | `cardgamedsl/master` | Bachelor Project | Frontend for the Card Game Description Language | Finished |
+| [@gSys](https://github.com/gSys1337) | `dev/jancc` | Bachelor Project | GUI Widgets | Finished |
+| [@gSys](https://github.com/gSys1337) | `dev/jancc` | Bachelor Thesis | Communication Protocol for QR-Codes | Finished |
+| [@duchilco](https://github.com/duchilco) | `dev/duchilio` | Bachelor Project | Lobby System | Ongoing |
+| [@alex-keller](https://github.com/alex-keller-dev) | `dev/akeller` | Bachelor Project | MCG Engine | Ongoing |
+| **You!** | `dev/yourname` | *Bachelor/Master Project/Thesis* | *Select your topic* | Onboarding |
 
 *Are you ready to join the registry? Check out the [Participation Lifecycle](/organisational/lifecycle) to get started!*

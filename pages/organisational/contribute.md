@@ -6,25 +6,72 @@ outline: deep
 
 This guide outlines how to set up your local development environment, build the project, and contribute new features or documentation to our codebase. Please follow these instructions carefully to ensure compatibility across our multi-platform workspace.
 
----
-
 ## 1. Prerequisites & Toolchain Setup
 
 To develop and build both the frontend and backend, you will need the following tools installed on your local machine:
 
-1. **Rust Toolchain:** Install Rust stable using [rustup](https://rustup.rs).
+1. **Rust Toolchain:**
+   - Install Rust stable using [rustup](https://rustup.rs).
+   - TODO: write that our project uses WebAssembly and therefore needs the `wasm32-unknown-unknown` target
 2. **Just Runner:** We use `just` as a command runner for project actions.
-   - macOS: `brew install just`
-   - Linux: `apt install just` or `cargo install just`
-   - Windows: `winget install casey.just` or `cargo install just`
+   - `cargo install just`
 3. **WebAssembly Pack (`wasm-pack`):** Needed to compile our Rust frontend into WebAssembly.
-   - Download and run the installer from the [wasm-pack website](https://rustwasm.github.io/wasm-pack/installer/).
-4. **NodeJS / Package Manager (for the website):**
-   - Install [NodeJS](https://nodejs.org). We recommend using `bun` or `npm` to run and compile this VitePress website.
+   - `cargo install wasm-pack`
+4. **Optional dependencies for the Website:**
+   - Install [NodeJS](https://nodejs.org). Node, npm, and bun are only used for the website. If these are installed, you can view a live preview of the changes you make before publishing them.
 
----
+## 2. Compiling WebAssembly (WASM)
 
-## 2. Windows Specific Setup & Gotchas
+Our frontend is a WebAssembly application built with Rust and `egui`/`eframe`. 
+
+### The Build Pipeline
+1. **Compilation:** `wasm-pack` compiles our `frontend` crate, creating highly optimized WebAssembly files and JS bindings.
+2. **Artifact Directory:** The compiled outputs are saved under the workspace root folder `/pkg/`.
+3. **Asset Serving:** The native backend server (`native_mcg`) automatically serves the HTML wrapper and all files inside `/pkg/` to the browser.
+
+### Key Just Recipes
+We use `just` recipes to automate compile loops. Run these from your root workspace:
+- **Build Frontend (Release):**
+  ```shell
+  just build release
+  ```
+- **Run Developer Server (Frontend + Native Backend):**
+  ```shell
+  just start dev
+  ```
+  This command automatically builds the frontend in development mode and launches the native backend server (serving on port 3000+).
+
+## 3. Local Code Documentation (Cargo Docs)
+
+We maintain extensive internal architecture documentation, API contracts, and crate-level comments inside our Rust codebase. 
+
+To build and browse this documentation locally open a terminal in the root `mcg` workspace directory and run the following command:
+
+   ```shell
+   cargo doc --workspace --no-deps --open
+   ```
+
+This will compile all module-level docstrings and open a browser window displaying the workspace's fully cross-linked rustdoc site.
+
+Crate-level responsibilities and system boundaries are documented using module-level comments `//!` at the top of each crate's main entry file (e.g., `frontend/src/lib.rs`, `native_mcg/src/lib.rs`, `shared/src/lib.rs`).
+
+## 4. Coding & Contribution Rules
+
+To maintain codebase health and ease peer code reviews, all contributions must respect the following rules:
+
+* **Strict Code Formatting:** Run `cargo fmt --all` before staging changes. Unformatted code will trigger a failure in the CI pipeline.
+* **Compiler Warnings as Errors:** Your code must compile without clippy warnings. Run:
+  ```shell
+  cargo clippy --workspace --all-targets -- -D warnings
+  ```
+* **Verify Tests:** Ensure all unit and integration tests succeed:
+  ```shell
+  cargo test --workspace
+  ```
+* **Branch-Based Workflow:** Direct commits to `main` are strictly forbidden. Changes can only be integrated into `main` via a pull request (PR) that must be reviewed and approved by a supervisor. PRs are only accepted once all quality requirements are fully met, including strict code formatting, zero compiler warnings, passing test suites, and completed documentation. For active development, students should create a dedicated branch for their project/thesis named with their abbreviation (e.g., `dev/jancc`). Under this personal branch, you are free to use sub-feature branches to organize your work (e.g., `dev/jancc/feature/my-addition`).
+* **Documentation Commitment:** When creating new components or changing interfaces, updates to relevant modules docs are required. This includes files of this Website.
+
+## 5. Windows Specific Setup & Gotchas
 
 Developing systems-level Rust applications on Windows can occasionally lead to toolchain path or security blocks. Follow these two workarounds if you encounter compiler errors:
 
@@ -49,60 +96,3 @@ Windows Smart App Control may block `cargo.exe`, `rustup.exe`, or locally compil
    ```powershell
    .\sign_rust_binaries.ps1 .\target\debug\native_mcg.exe
    ```
-
----
-
-## 3. Compiling WebAssembly (WASM)
-
-Our frontend is a WebAssembly application built with Rust and `egui`/`eframe`. 
-
-### The Build Pipeline
-1. **Compilation:** `wasm-pack` compiles our `frontend` crate, creating highly optimized WebAssembly files and JS bindings.
-2. **Artifact Directory:** The compiled outputs are saved under the workspace root folder `/pkg/`.
-3. **Asset Serving:** The native backend server (`native_mcg`) automatically serves the HTML wrapper and all files inside `/pkg/` to the browser.
-
-### Key Just Recipes
-We use `just` recipes to automate compile loops. Run these from your root workspace:
-- **Build Frontend (Release):**
-  ```shell
-  just build release
-  ```
-- **Run Developer Server (Frontend + Native Backend):**
-  ```shell
-  just start dev
-  ```
-  This command automatically builds the frontend in development mode and launches the native backend server (serving on port 3000+).
-
----
-
-## 4. Local Code Documentation (Cargo Docs)
-
-We maintain extensive internal architecture documentation, API contracts, and crate-level comments inside our Rust codebase. 
-
-To build and browse this documentation locally:
-1. Open a terminal in the root `mcg` workspace directory.
-2. Run the following command:
-   ```shell
-   cargo doc --workspace --no-deps --open
-   ```
-3. This will compile all module-level docstrings and open a browser window displaying the workspace's fully cross-linked rustdoc site.
-4. **Crate Description Locations:**
-   - Crate-level responsibilities and system boundaries are documented using module-level comments `//!` at the top of each crate's main entry file (e.g., `frontend/src/lib.rs`, `native_mcg/src/lib.rs`, `shared/src/lib.rs`).
-
----
-
-## 5. Coding & Contribution Rules
-
-To maintain codebase health and ease peer code reviews, all contributions must respect the following rules:
-
-* **Strict Code Formatting:** Run `cargo fmt --all` before staging changes. Unformatted code will trigger a failure in the CI pipeline.
-* **Compiler Warnings as Errors:** Your code must compile without clippy warnings. Run:
-  ```shell
-  cargo clippy --workspace --all-targets -- -D warnings
-  ```
-* **Verify Tests:** Ensure all unit and integration tests succeed:
-  ```shell
-  cargo test --workspace
-  ```
-* **Branch-Based Workflow:** All development must occur on separate feature branches (e.g. `feature/my-addition`). Direct commits to `main` are restricted.
-* **Documentation Commitment:** When creating new components or changing interfaces, update relevant modules docs and keep the VitePress files in sync.

@@ -17,39 +17,32 @@ flowchart LR
     C --> D["4. WRAP-UP<br>Submit & Grade"]
 ```
 
----
-
 ## 1. Discovery & Topic Selection
 
 The first step is identifying a technical backlog task or research area that excites you and aligns with your background.
 
 1. **Explore the Backlog:** Review the open research and software development items listed in our [Student Milestones Backlog](/project/milestones).
-2. **Understand the Expected Workload:** Workload expectations are adjusted dynamically based on your project type (e.g., a short practical vs. a multi-month thesis). You do not need to worry about rigid point counts; instead, your supervisor will brief you on the expected scope.
-3. **Connect with Supervisors:** Reach out to the supervisors listed on the [Active Registry (People)](/organisational/people) page. Together, you will refine the project boundaries, adjust specific deliverables, and map out the first tasks.
-
----
+2. **Connect with Supervisors & Project Members:** Reach out to the supervisors listed on the [Active Registry (People)](/organisational/people) page and other project members to get in touch. This is important to help supervisors better guide you to good ideas, refine project boundaries, and discuss the expected workload.
+3. **Kick-off Presentation:** Once you decide on a milestone to work on, you are expected to hold a kick-off presentation. This presentation specifies the tasks you will work on, how you plan to solve the problems, or which research questions will be investigated in case of a thesis.
 
 ## 2. Onboarding & Environment Setup
 
 Once your topic is finalized, you will establish your developer workspace. This phase aims to get you fully set up and familiar with the system architecture.
 
 1. **Read the Blueprints:** Make sure you study:
-   - The [System Architecture](/project/architecture) page to understand components, actor model data flows, and system boundaries.
+   - The [System Architecture](/project/architecture) page to understand components, actor model data flows, system boundaries ...
    - The [Repository Layout & Modules](/project/modules) page to understand crate dependencies and the codebase structure.
 2. **Set Up Your Toolchain:** Follow our step-by-step developer environment manual in the [Developer Setup Guide](/organisational/contribute).
-3. **Join Communication Channels:** Ask your supervisor to invite you to our internal chat server (e.g., Discord) and verify you have access to the GitHub organization.
-
----
+3. **Join Communication Channels:** Ask your supervisor to invite you to our internal resources (e.g., Matrix or Next Cloud) and verify you have access to the GitHub organization.
 
 ## 3. Active Research & Coding
 
 This is the main phase of your project. We promote an open, collaborative environment where students support each other.
 
-* **Regular Syncs & Exchange:** While there is no rigid clock-in requirement, it is highly recommended as a developer best practice to participate in regular exchange with your supervisor and other active students. This ensures that you stay aligned, resolve blockers quickly, and enjoy a collaborative peer environment.
-* **Coordinate Dependencies:** Look at the [Active Registry (People)](/organisational/people) to see what other students are building. Since the project uses a shared monorepo, early communication on API changes or protocol enhancements prevents merge conflicts.
+* **Continuous Exchange with Supervisors:** Ongoing, active communication with your supervisors after the kick-off is critical to keep them up to date with your progress and ensure your project stays on track. It is also the best way to get help, receive guidance, and get unstuck if you face obstacles.
+* **Regular Syncs & Peer Exchange:** While there is no rigid clock-in requirement, it is highly recommended to participate in regular exchange with other active students. A key opportunity for this is our regular **Mental Card Game Meeting**, which are advertised on our internal chat server (Matrix) and listed on the chair's website. These syncs are a great way to resolve shared engineering challenges and enjoy a collaborative peer environment.
+* **Coordinate Dependencies:** Look at the [Active Registry (People)](/organisational/people) to see what other students are building. Students are expected to add themselves to this registry, though doing so is entirely voluntary to respect data privacy. Since the project uses a shared monorepo, early communication on API changes or protocol enhancements prevents merge conflicts.
 * **Submit Iterative Pull Requests:** Avoid massive "end-of-semester" code dumps. Frequent, smaller pull requests (PRs) make review easier and help maintain stable compilation across the monorepo.
-
----
 
 ## 4. Project Wrap-up & Grading
 
