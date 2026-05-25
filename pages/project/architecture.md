@@ -216,3 +216,18 @@ classDiagram
 ## Cryptography Abstraction
 
 Since multiple ZKP protocols will be implemented to support the various mental card game requirements, the cryptography layer is heavily abstracted behind **Traits**. The Game Engine interacts exclusively with these traits rather than concrete implementations, allowing for flexibility, swapping of protocols, and cleaner testing.
+
+---
+
+## Architectural Invariant Guardrails (The System Laws)
+
+To maintain a healthy, decoupled, and secure monorepo, all developer contributions must respect three foundational system guardrails:
+
+### Invariant 1: No Authoritative Client State
+The browser-based WASM frontend client is strictly a **stateless view and input layer** (Thin Client paradigm). It maps user interactions to events and translates incoming FSM updates into graphics. No core game state calculations, card draws, shuffling, or rules validations should *ever* be authored or executed in the client.
+
+### Invariant 2: Contract-Bound Interface Channels
+To preserve structural safety, all data streams flowing across component boundaries (local WebSockets, Peer2Peer sockets, CLI connections) must be strictly bound to serializable schema contracts defined in the `shared` crate (e.g. `Frontend2BackendMsg` and `Peer2PeerMsg`). Component-to-component messaging must never use ad-hoc loose payloads.
+
+### Invariant 3: Non-Blocking Async Actors
+The native backend connection supervisor relies on a lightweight Tokio actor loop. Async receiver streams and message actors must never execute blocking synchronous calls or long-running computations. Any heavy cryptographic equations (such as Zero-Knowledge Proof validations) or disk/file operations must be offloaded to dedicated threadpools (e.g. using `tokio::task::spawn_blocking` or separate actors).

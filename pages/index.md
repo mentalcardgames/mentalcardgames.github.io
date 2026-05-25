@@ -8,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /docs/get-started
+      link: /organisational/lifecycle
     - theme: alt
       text: Cone
       link: https://cone.informatik.uni-freiburg.de/tea/projects-and-theses-2025

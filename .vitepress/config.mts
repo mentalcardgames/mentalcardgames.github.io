@@ -19,53 +19,54 @@ export default withMermaid(
       },
       nav: [
         { text: "Home", link: "/" },
-        { text: "Docs", link: "/docs/about" },
+        { text: "Lifecycle", link: "/organisational/lifecycle" },
+        { text: "Blueprints", link: "/project/" },
       ],
 
       sidebar: [
         {
-          text: "Docs",
-          link: "/docs/",
+          text: "The Student Journey",
           items: [
-            { text: "About", link: "/docs/about" },
-            { text: "Get Started", link: "/docs/get-started" },
-            { text: "Local Documentation", link: "/docs/cargo" },
+            { text: "Participation Lifecycle", link: "/organisational/lifecycle" },
+            { text: "Developer Setup & Rules", link: "/organisational/contribute" },
+            { text: "Literature & References", link: "/organisational/literature" },
+            { text: "Active Registry (People)", link: "/organisational/people" },
           ],
         },
         {
-          text: "Project",
-          link: "/project/",
+          text: "Technical Blueprints",
           items: [
-            { text: "Architecture", link: "/project/architecture" },
-            { text: "Modules", link: "/project/modules" },
-            { text: "Backend", link: "/project/backend" },
-            { text: "TUI", link: "/project/tui" },
-            { text: "Game Engine", link: "/project/engine" },
-            { text: "Frontend", link: "/project/frontend" },
+            { text: "Overview & Mindmap", link: "/project/" },
+            { text: "Vision & Baselines", link: "/project/vision" },
+            { text: "System Architecture", link: "/project/architecture" },
+            { text: "Repository Layout & Modules", link: "/project/modules" },
+            { text: "Student Milestones Backlog", link: "/project/milestones" },
+            { text: "Technical Roadmap", link: "/project/roadmap" },
+          ],
+        },
+        {
+          text: "Component Deep Dives",
+          items: [
+            { text: "Backend Engine", link: "/project/backend" },
+            { text: "Frontend Client", link: "/project/frontend" },
+            { text: "Text User Interface (TUI)", link: "/project/tui" },
+            { text: "Game Engine (FSM)", link: "/project/engine" },
             { text: "QR-Code Protocol", link: "/project/qr-comm" },
-            { text: "CGDL", link: "/project/cgdl" },
-            { text: "Poker", link: "/project/poker" },
+            { text: "CGDL Compiler", link: "/project/cgdl" },
+            { text: "Poker Game Implementation", link: "/project/poker" },
           ],
         },
         {
-          text: "Organisational",
+          text: "Examples & Templates",
           items: [
-            { text: "Contribute", link: "/organisational/contribute" },
-            { text: "Information Sources", link: "/organisational/information" },
-            { text: "People", link: "/organisational/people" },
-          ],
-        },
-        {
-          text: "Examples",
-          items: [
-            { text: "Markdown Examples", link: "/examples/markdown-examples" }
+            { text: "Markdown Showcase", link: "/examples/markdown-examples" }
           ],
         },
         {
           text: "Archive",
           items: [
-            { text: "Platform considerations", link: "/archive/platforms" },
-            { text: "Architecture old", link: "/archive/architecture" },
+            { text: "Platform Considerations", link: "/archive/platforms" },
+            { text: "Old System Architecture", link: "/archive/architecture" },
           ],
         },
       ],
