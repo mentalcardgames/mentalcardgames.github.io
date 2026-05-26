@@ -71,7 +71,7 @@ flowchart TD
 
 ## System Components & Interfaces
 
-The following diagram illustrates the boundaries and communication paths within a single player's Node, as well as its connection to the outside world. The following diagram illustrates the components in the workspace and their relationships.
+The following diagram illustrates the component structure in the workspace, their relationships, and the communication paths within a single player's Node, as well as its connection to the outside world.
 
 ```mermaid
 flowchart TB
@@ -119,7 +119,7 @@ flowchart TB
     Shared -.->|Extends with| Crypto
 ```
 
-### New Actor Model
+### Component Interaction Architecture
 
 ![Component Architecture](Component-Architecture.svg)
 
@@ -161,7 +161,7 @@ Workspace
 
 ### Class / Struct Diagram
 
-In this architecture, the **Network Supervisor** serves purely as an abstraction layer for the **Context**. When a network message is received by a tiny connection task (either via a WebSocket from a local frontend or over Iroh from a remote peer), the task forwards it to the Supervisor's MPSC channel. The Supervisor's receive method then forwards it to the Context. The Context then processes the message, updating its state or interacting with the Game Engine as needed.
+In this architecture, the **Network Supervisor** serves as an abstraction layer for the **Context**. When a network message is received by a lightweight connection handler (either via a WebSocket from a local frontend or over Iroh from a remote peer), the handler forwards it to the Supervisor's MPSC channel. The Supervisor then funnels it to the `Context` message loop, which processes the message, updates the local state, or interacts with the Game Engine as needed.
 
 ```mermaid
 classDiagram
@@ -208,26 +208,28 @@ classDiagram
 
 #### Key Relationships
 
+::: info Architecture Integration
 1. **Context Initialization**: `main.rs` parses the `CliArgs` and loads the `Config` which in turn is used to initialize the `Context`.
-2. **Network Abstraction**: The `NetworkSupervisor` shields the `Context` from the intricacies of connection management. It holds all connections into which the context can write. Tiny connection tasks forward incoming messages into the Supervisor's channels (`ws_rx`, `p2p_rx`), and the Supervisor funnels them to the `Context` via `context_tx`.
+2. **Network Abstraction**: The `NetworkSupervisor` shields the `Context` from the intricacies of connection management. It holds all connections into which the context can write. Dedicated connection tasks forward incoming messages into the Supervisor's channels (`ws_rx`, `p2p_rx`), and the Supervisor funnels them to the `Context` via `context_tx`.
 3. **Engine Independence**: The `GameEngineActor` resides in a separate crate and evaluates the actions based on the cryptographic traits. The `Context` interacts with it via message passing.
-
+:::
 
 ## Cryptography Abstraction
 
 Since multiple ZKP protocols will be implemented to support the various mental card game requirements, the cryptography layer is heavily abstracted behind **Traits**. The Game Engine interacts exclusively with these traits rather than concrete implementations, allowing for flexibility, swapping of protocols, and cleaner testing.
 
----
-
 ## Architectural Invariant Guardrails (The System Laws)
 
 To maintain a healthy, decoupled, and secure monorepo, all developer contributions must respect three foundational system guardrails:
 
-### Invariant 1: No Authoritative Client State
+::: danger Invariant 1: No Authoritative Client State
 The browser-based WASM frontend client is strictly a **stateless view and input layer** (Thin Client paradigm). It maps user interactions to events and translates incoming FSM updates into graphics. No core game state calculations, card draws, shuffling, or rules validations should *ever* be authored or executed in the client.
+:::
 
-### Invariant 2: Contract-Bound Interface Channels
-To preserve structural safety, all data streams flowing across component boundaries (local WebSockets, Peer2Peer sockets, CLI connections) must be strictly bound to serializable schema contracts defined in the `shared` crate (e.g. `Frontend2BackendMsg` and `Peer2PeerMsg`). Component-to-component messaging must never use ad-hoc loose payloads.
+::: warning Invariant 2: Contract-Bound Interface Channels
+To preserve structural safety, all data streams flowing across component boundaries (local WebSockets, Peer2Peer sockets, CLI connections) must be strictly bound to serializable schema contracts defined in the `shared` crate (e.g., `Frontend2BackendMsg` and `Peer2PeerMsg`). Component-to-component messaging must never use ad-hoc, loose payloads.
+:::
 
-### Invariant 3: Non-Blocking Async Actors
-The native backend connection supervisor relies on a lightweight Tokio actor loop. Async receiver streams and message actors must never execute blocking synchronous calls or long-running computations. Any heavy cryptographic equations (such as Zero-Knowledge Proof validations) or disk/file operations must be offloaded to dedicated threadpools (e.g. using `tokio::task::spawn_blocking` or separate actors).
+::: tip Invariant 3: Non-Blocking Async Actors
+The native backend connection supervisor relies on a lightweight Tokio actor loop. Async receiver streams and message actors must never execute blocking synchronous calls or long-running computations. Any heavy cryptographic equations (such as Zero-Knowledge Proof validations) or disk/file operations must be offloaded to dedicated threadpools (e.g., using `tokio::task::spawn_blocking` or separate actors).
+:::
