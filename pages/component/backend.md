@@ -141,3 +141,95 @@ sequenceDiagram
     RunServer->>Axum: axum::serve(listener, app)
     Note right of Axum: Server is now listening<br/>for HTTP/WS requests
 ```
+
+---
+
+## Actor-Based Connection Architecture
+
+### Network & Connection Lifecycle
+
+1. **Out-of-Protocol Discovery**: Initial peer discovery is handled out-of-protocol. For example, a player might scan a QR code or copy a connection string from another player to bootstrap the first connection.
+2. **In-Protocol Advertisement**: Once an initial connection is established, further peers are discovered via in-protocol gossip or advertisements (e.g., Player A introduces Player B to Player C).
+3. **Frontend Independence**: The backend does not depend on a connected frontend to maintain these P2P connections or process background state. Frontends can connect or disconnect at will without interrupting the node's P2P responsibilities.
+
+### File Structure
+
+The project has been restructured to cleanly separate the communication layer from the core backend logic, and to extract the game engine into its own independent crate. The following diagram illustrates this organization using a tree view representation.
+
+```text
+Workspace
+├── native_mcg
+│   └── src
+│       ├── main.rs
+│       ├── lib.rs
+│       ├── context.rs
+│       └── communication
+│           ├── mod.rs
+│           ├── supervisor.rs
+│           ├── ws.rs
+│           └── p2p.rs
+└── engine
+    └── src
+        ├── actor.rs
+        └── lib.rs
+```
+
+- **`native_mcg/src/context.rs`**: The heart of the native backend. This module defines the `Context` struct, CLI argument parsing, configuration loading, and core business logic handling.
+- **`native_mcg/src/communication/`**: Contains the implementations for the actor model. This includes the `NetworkSupervisor` (which abstracts the network layer) and the specific transport actors (`ws.rs` for WebSockets, `p2p.rs` for Iroh peer-to-peer).
+- **`engine/`**: The Game Engine has been moved out of the backend into its own dedicated crate. It operates as its own actor (`actor.rs`), capable of receiving and transmitting messages independently.
+
+### Class / Struct Diagram
+
+In this architecture, the **Network Supervisor** serves as an abstraction layer for the **Context**. When a network message is received by a lightweight connection handler (either via a WebSocket from a local frontend or over Iroh from a remote peer), the handler forwards it to the Supervisor's MPSC channel. The Supervisor then funnels it to the `Context` message loop, which processes the message, updates the local state, or interacts with the Game Engine as needed.
+
+```mermaid
+classDiagram
+    class Context {
+        +CliArgs cli_args
+        +Config config
+        +Receiver~ContextMsg~ context_rx
+        +handle_messages() Result
+        +run() Result
+        +from_config(Config) Context
+    }
+    
+    class Config {
+        +load(CliArgs) Config
+    }
+    
+    class CliArgs {
+    }
+    
+    class NetworkSupervisor {
+        +Sender~ContextMsg~ context_tx
+        +Receiver~WsMsg~ ws_rx
+        +Receiver~P2PMsg~ p2p_rx
+        +Vec~Sender~WsMsg~~ local_frontends
+        +Vec~Sender~P2PMsg~~ remote_peers
+        +receive_network_message()
+    }
+    
+    class GameEngineActor {
+        +Box~dyn CryptoTraits~ crypto
+        +evaluate_action()
+        +verify_zkp()
+    }
+
+    Context *-- Config : owns
+    Context *-- CliArgs : owns
+    
+    %% The Supervisor forwards network events to the Context
+    NetworkSupervisor ..> Context : forwards messages to
+    
+    %% The Context interacts with the Engine to evaluate game rules
+    Context --> GameEngineActor : queries / sends actions
+```
+
+#### Key Relationships
+
+::: info Architecture Integration
+1. **Context Initialization**: `main.rs` parses the `CliArgs` and loads the `Config` which in turn is used to initialize the `Context`.
+2. **Network Abstraction**: The `NetworkSupervisor` shields the `Context` from the intricacies of connection management. It holds all connections into which the context can write. Dedicated connection tasks forward incoming messages into the Supervisor's channels (`ws_rx`, `p2p_rx`), and the Supervisor funnels them to the `Context` via `context_tx`.
+3. **Engine Independence**: The `GameEngineActor` resides in a separate crate and evaluates the actions based on the cryptographic traits. The `Context` interacts with it via message passing.
+:::
+

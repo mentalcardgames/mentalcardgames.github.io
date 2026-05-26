@@ -30,8 +30,8 @@ The first step is identifying a technical backlog task or research area that exc
 Once your topic is finalized, you will establish your developer workspace. This phase aims to get you fully set up and familiar with the system architecture.
 
 1. **Read the Blueprints:** Make sure you study:
-   - The [System Architecture](/project/architecture) page to understand components, actor model data flows, system boundaries ...
-   - The [Repository Layout & Modules](/project/modules) page to understand crate dependencies and the codebase structure.
+   - The [System Paradigms](/project/paradigms) page to understand components, actor model data flows, system boundaries ...
+   - The [Repository Components & Layout](/project/repository-components-layout) page to understand crate dependencies and the codebase structure.
 2. **Set Up Your Toolchain:** Follow our step-by-step developer environment manual in the [Developer Setup Guide](/organisational/contribute).
 3. **Join Communication Channels:** Ask your supervisor to invite you to our internal resources (e.g., Matrix or Next Cloud) and verify you have access to the GitHub organization.
 

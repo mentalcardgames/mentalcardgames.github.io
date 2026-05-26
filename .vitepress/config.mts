@@ -38,8 +38,8 @@ export default withMermaid(
           items: [
             { text: "Overview & Mindmap", link: "/project/" },
             { text: "Vision & Baselines", link: "/project/vision" },
-            { text: "System Architecture", link: "/project/architecture" },
-            { text: "Repository Layout & Modules", link: "/project/modules" },
+            { text: "System Paradigms", link: "/project/paradigms" },
+            { text: "Repository Components & Layout", link: "/project/repository-components-layout" },
             { text: "Student Milestones Backlog", link: "/project/milestones" },
             { text: "Technical Roadmap", link: "/project/roadmap" },
           ],

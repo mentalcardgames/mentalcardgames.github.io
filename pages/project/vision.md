@@ -27,6 +27,10 @@ Mental card games rely on mathematical proofs to ensure fair play, eliminating t
 * **Long-Term Goal & Vision:** A fully serverless, mathematically fair card system. Cards are shuffled, drawn, and held face-down using cryptographic primitives (such as commutative encryption and Zero-Knowledge Proofs). Players can prove they shuffled honestly or drew a card within game bounds without revealing their secret hands, ensuring total fairness even on hostile networks.
 * **Current Software Baseline:** The current lobby system operates under an authoritative host model. The backend server holds full knowledge of the card deck and game state, acting as a trusted coordinator. We are transitioning toward implementing verifiable shuffling protocols using libraries like `arkworks`.
 
+### Cryptography Abstraction
+
+Since multiple ZKP protocols will be implemented to support the various mental card game requirements, the cryptography layer is heavily abstracted behind **Traits**. The Game Engine interacts exclusively with these traits rather than concrete implementations, allowing for flexibility, swapping of protocols, and cleaner testing.
+
 ## 4. Peer-to-Peer Consensual Networking
 
 Distributed gameplay requires robust connection bootstrapping, peer discovery, and consensus on state transitions.
