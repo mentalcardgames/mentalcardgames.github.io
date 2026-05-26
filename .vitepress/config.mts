@@ -47,13 +47,13 @@ export default withMermaid(
         {
           text: "Component Deep Dives",
           items: [
-            { text: "Backend Engine", link: "/project/backend" },
-            { text: "Frontend Client", link: "/project/frontend" },
-            { text: "Text User Interface (TUI)", link: "/project/tui" },
-            { text: "Game Engine (FSM)", link: "/project/engine" },
-            { text: "QR-Code Protocol", link: "/project/qr-comm" },
-            { text: "CGDL Compiler", link: "/project/cgdl" },
-            { text: "Poker Game Implementation", link: "/project/poker" },
+            { text: "Backend Engine", link: "/component/backend" },
+            { text: "Frontend Client", link: "/component/frontend" },
+            { text: "Text User Interface (TUI)", link: "/component/tui" },
+            { text: "Game Engine (FSM)", link: "/component/engine" },
+            { text: "QR-Code Protocol", link: "/component/qr-comm" },
+            { text: "CGDL Compiler", link: "/component/cgdl" },
+            { text: "Poker Game Implementation", link: "/component/poker" },
           ],
         },
         {
