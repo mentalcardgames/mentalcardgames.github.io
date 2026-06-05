@@ -2,62 +2,104 @@
 outline: deep
 ---
 
-# System Paradigms
+# System Design
 
-## Overview
+::: danger
+TODO: Update the remaining website to refere to this page with its new name "system design".
+:::
 
-The application follows a **Frontend-Backend / P2P Node** architecture. The system is designed around a **Split Node** concept where each player runs their own local Backend and Frontend, eventually communicating peer-to-peer over decentralized transports. To keep the project decoupled, clean, and highly secure, our development is guided by several core architectural paradigms and software patterns.
+This page serves as a comprehensive guide to the **architectural paradigms** and **software patterns** that govern the development of the Mental Card Game (MCG) ecosystem. 
 
----
+For developers, project members, and contributors, this document outlines the fundamental design rules, architectural decisions, and structural boundaries of the codebase. By exploring this page, you will find:
+* **Detailed explanations** of important software pattern and paradigm used in the project.
+* **Structural models and diagrams** illustrating how components interact with eachother if appropriate.
+* **The rationale behind key decisions** (such as security boundaries, decentralization, and dependency management) to help you gain a strong intuition for the system.
 
-## Software-Patterns
+These paradigms serve as a guide for the development of current and future features, helping developers understand the decisions that imply the implementations. By adhering to these principles, we ensure that new code remains clean, decoupled, and secure.
 
-### 1. Split Node Pattern
-The entire system is structured as a **Split Node**.
-* **Each Player is a Node:** Rather than players connecting to a centralized game server, every individual user runs a full local instance. This instance comprises both a browser-based client and a native desktop backend.
-* **Native Power:** The native backend handles all resource-heavy operations: executing the game engine FSM, generating zero-knowledge proofs (ZKPs), and managing peer-to-peer sockets. This bypasses browser sandbox restrictions and performance bottlenecks (lack of direct OS threads or raw TCP/UDP networking).
+## Split Node
 
-### 2. Backend Peer Pattern
-The backend server acts as a **Peer** in the decentralized network.
-* **Dual Responsibility:** The backend serves static assets and establishes local connections with its own user's frontend. Simultaneously, it connects directly with remote backend instances of other players in the game lobby.
-* **Decentralized Coordination:** The backend peer acts as a local authoritative state supervisor, routing network actions, verifying cryptographic shuffles, and gossiping game updates peer-to-peer.
+In the distributed context of this project, gameplay occurs in a decentralized, peer-to-peer network with no central trusted party. Instead of connecting to a single authoritative server, players connect directly to each other as equal peers. Consequently, every participant runs a self-contained setup that represents a single node in this peer-to-peer topology.
 
-### 3. WebAssembly Frontend Pattern
-The visual client is compiled to **WebAssembly (WASM)**.
-* **High-Performance In-Browser Rendering:** Built in Rust using `egui` (via `eframe`), the frontend compiles to WASM and runs inside any standard browser engine.
-* **Direct UI Loop:** It leverages immediate-mode rendering for a highly responsive user experience, utilizing native browser canvas and WebGL/WebGPU graphics.
+To handle this environment cleanly and securely, the project separates each player's node into two distinct components: a **Frontend** for visualization and a **Backend** for computation.
+This division ensures a clean separation of concerns and forms the foundation of our local node architecture.
 
-### 4. Model-View-Controller (MVC) Pattern
-We utilize an MVC paradigm to cleanly separate user interfaces from core game state execution.
+::: danger
+TODO: Insert here a small diagramm of five players connected in a ring together.
+Each player is a "split" node.
+The frontend of each player is one normal node and connected to the backend.
+The backend of each player is one normal node as well.
+Only the backend nodes have connections to other players in the ring.
+There should be an oval over each frontend and backend pair.
+:::
 
+### WASM Frontend
+
+The frontend is responsible entirely for visualization, rendering, and managing the user interface.
+It is compiled to [WebAssembly (WASM)](https://webassembly.org/) — a low-level binary instruction format designed as a high-performance compilation target for compiled languages.
+
+Our goal is to make this project easily usable and capable of targeting as many devices as possible.
+Since web browsers are already universally widespread, they are the natural platform for client-side rendering.
+While traditional web visuals are structured using HTML and CSS, WebAssembly is a compelling alternative for multiple reasons.
+
+* **Direct Canvas Control:** The `<canvas>` is completely controlled and drawn onto by the WebAssembly binary, bypassing standard DOM layout overhead.
+* **Minimal HTML Footprint:** We serve a very lean HTML file containing a single `<canvas>` element.
+* **Single-Language Codebase:** Since Rust has first-class support for compiling to WASM, the HTML canvas is ultimately controlled entirely from Rust. This allows the entire project to be written in a single language, enabling seamless data-type sharing and reducing development complexity.
+
+### Native Backend
+
+The backend runs as a local desktop service on the user's machine, acting as a self-contained peer in the decentralized network. It serves as a connection gateway, bridging the human player's interactions on the frontend to the peer-to-peer network.
+
+Additionally, the backend serves the WASM frontend binary and static media assets and also all other integration responsibilities are implemented here. This integration acts as the glue that merges all components into a cohesive, unified whole, ensuring the system operates as a single, well-working entity.
+
+## Model-View-Controller (MVC)
+
+We utilize an MVC paradigm to cleanly separate user interfaces from core game state execution. At its core, this pattern divides responsibilities into three distinct roles:
+
+* **Model:** Responsible solely for managing the application data. It provides the set of instructions and rules applied to the data, guaranteeing that the state always remains consistent.
+* **View:** Responsible for displaying an interface representing the data and detecting user input.
+* **Controller:** Sits in between both the Model and the View and mediates between them. The View notifies the Controller about user input, which is then translated into the correct instruction for the Model. Conversely, the Model notifies the Controller about changes to the data, which are then relayed back to the View.
+
+<div align="center">
+
+```mermaid
+flowchart LR
+    View(["View"])
+    Controller(["Controller"])
+    Model(["Model"])
+
+    View --> Controller
+    Controller --> View
+    Controller --> Model
+    Model --> Controller
 ```
-       ┌────────────────────────────────────────────────────────┐
-       │                   SPLIT PLAYER NODE                    │
-       │                                                        │
-       │  ┌───────────────┐                  ┌───────────────┐  │
-       │  │     VIEW      │  User Input Msg  │  CONTROLLER   │  │
-       │  │ (Thin WASM)   ├─────────────────>│   (Backend)   │  │
-       │  └───────▲───────┘                  └───────┬───────┘  │
-       │          │                                  │          │
-       │          │ State Broadcast                  │ Actions  │
-       │          │                                  ▼          │
-       │  ┌───────┴───────┐                  ┌───────────────┐  │
-       │  │     MODEL     │  FSM State Update│ Game Engine   │  │
-       │  │  (Replicated) │<─────────────────┤ (Model-Engine)│  │
-       │  └───────────────┘                  └───────────────┘  │
-       └────────────────────────────────────────────────────────┘
-```
 
-#### Thin View-Client
-The browser-based WASM frontend is strictly a **stateless view and input layer**.
-* **Paradigm Law:** The client is responsible only for rendering graphics based on incoming state and mapping user clicks into network events. 
-* **State Decoupling:** No core game calculations, card shuffles, draws, or rule validations should *ever* be authored or executed in the client. This enforces a strict security boundary where the client cannot cheat.
+</div>
 
-#### Model-Engine
-The game engine acts as the authoritative **Model-Engine** running on the native backend.
-* **State Machine Authority:** The game engine executes a strict deterministic Finite State Machine (FSM) compiled from game rules. It is the sole component allowed to transition the game state, perform shuffles, and generate ZKPs verifying fair play.
+### View Frontend
 
-### 5. Actor-Based Connection Pattern
+The browser-based WebAssembly frontend implements only the **View** component of the MVC triad; the Model and Controller are entirely absent. 
+
+To achieve this, the frontend utilizes a *thin client* approach.
+Rather than managing game rules or storing the complete game state,
+it simply receives some state projection from the backend.
+The frontend is organized around a registry of multiple screens.
+Each screen is responsible only for rendering a specific subset of the total data
+and capturing user inputs to send back as messages.
+
+### Model & Controller Backend
+
+The backend manages various facets of the application's state through dedicated models.
+For instance, the card game rules and state machine represent one model (the Game Engine),
+while peer-to-peer connectivity and lobby memberships represent another model.
+Each component's data and state consistency rules are encapsulated in its respective model.
+
+A single, central controller mediates between these models and all external interfaces.
+When a remote peer sends a message, the controller processes it as an input event,
+updates the appropriate models,
+and broadcasts the resulting state changes back to both the local frontend and remote peers.
+
+## Actor-Based Connection Pattern
 To handle the high complexity of multiple asynchronous connections (local WebSockets from the frontend, remote peer connections, bot simulation loops), the backend utilizes a custom **Tokio-based Actor Model** using channels for message passing.
 
 * **Sequential Execution:** By encapsulating connections within isolated actors, state changes are processed sequentially, completely preventing race conditions and thread synchronization bottlenecks.
@@ -94,12 +136,12 @@ flowchart TD
   3. The `Supervisor` queries the `Game Engine Actor` to evaluate the action, shuffles cards, and generates cryptographic zero-knowledge proofs.
   4. The `Supervisor` updates the local state and broadcasts it to all connected `Frontend WS Actors` and remote `P2P Actors` via channels.
 
-### 6. Breaking Cyclic-Dependencies Pattern
+## Breaking Cyclic-Dependencies Pattern
 To maintain code health and rapid build times in a Rust workspace, we enforce strict compilation boundaries to break compilation cycles.
 * **Shared Abstraction Layer:** To prevent the `frontend` and the `native_mcg` backend from relying on circular imports, we extract all core interfaces, domain objects, and communication enums into a standalone `shared` crate.
 * **Uni-directional Graph:** Both backend and frontend depend solely on the `shared` crate. The `shared` crate depends on absolutely nothing in the workspace, ensuring a clean, compilation-friendly directed acyclic graph (DAG).
 
-### 7. Common Interface Pattern (Gleiche Datentypen verwenden)
+## Common Interface Pattern (Gleiche Datentypen verwenden)
 To preserve structural safety across different execution environments, all data flowing across boundaries must conform to contract-bound interface enums.
 * **Shared Core Datatypes:** We share identical, serialized enums across our WebAssembly browser runtime and the native Rust desktop runtime.
 * **Contract-Bound Sockets:** All message streams (local WebSockets, remote P2P, CLI streams) are strictly bound to identical enums defined in the `shared` crate:
@@ -107,12 +149,10 @@ To preserve structural safety across different execution environments, all data 
   - `Backend2FrontendMsg`: Broadcast from the backend to connected frontends.
   - `Peer2PeerMsg`: Distributed across backend peer-to-peer nodes.
 
-### 8. Non-Blocking Async Actors Pattern
+## Non-Blocking Async Actors Pattern
 The native backend connection supervisor relies on a lightweight, single-threaded execution loop.
 * **Async Safety Law:** Asynchronous message loops must never execute blocking synchronous calls or long-running computations, as this would freeze communication for all connected users.
 * **Offloaded Heavy Math:** Any heavy cryptographic computations (such as generating or verifying zero-knowledge proofs) or disk operations are offloaded to dedicated worker threadpools (e.g., using `tokio::task::spawn_blocking` or separate dedicated actors).
-
----
 
 ## Component Interaction Architecture
 
