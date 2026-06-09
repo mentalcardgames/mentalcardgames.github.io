@@ -99,7 +99,19 @@ When a remote peer sends a message, the controller processes it as an input even
 updates the appropriate models,
 and broadcasts the resulting state changes back to both the local frontend and remote peers.
 
-## Actor-Based Connection Pattern
+## Actor-Based Environment
+
+::: danger
+TODO:
+
+Change this section (Actor-Based Environment) to a different structure.
+I want it to start with a brief motivation why and where the need for actors comes from.
+For this you need to mention deadlocks, async and mental overhead in developement.
+
+This motivation should be followed by an explenation how actors make developement better,
+what they are and how they work.
+:::
+
 To handle the high complexity of multiple asynchronous connections (local WebSockets from the frontend, remote peer connections, bot simulation loops), the backend utilizes a custom **Tokio-based Actor Model** using channels for message passing.
 
 * **Sequential Execution:** By encapsulating connections within isolated actors, state changes are processed sequentially, completely preventing race conditions and thread synchronization bottlenecks.
