@@ -2,9 +2,9 @@
 outline: deep
 ---
 
-# Student Milestones Backlog
+# Student Milestones
 
-This backlog lists the active technical milestones and software engineering packages available for student projects. Each milestone represents a core challenge within our architecture. Rather than being tied to rigid academic ECTS levels, tasks are dynamically scaled and adjusted based on a student's expected workload.
+This lists the active milestones and software engineering packages available for student projects. Each milestone represents a core challenge within our architecture. Rather than being tied to rigid academic ECTS levels, tasks are dynamically scaled and adjusted based on a student's expected workload.
 
 ---
 

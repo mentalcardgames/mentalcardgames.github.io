@@ -99,72 +99,34 @@ When a remote peer sends a message, the controller processes it as an input even
 updates the appropriate models,
 and broadcasts the resulting state changes back to both the local frontend and remote peers.
 
-## Actor-Based Environment
+## Concurrent Execution Environment
+
+### Notwork Connections
 
 ::: danger
-TODO:
-
-Change this section (Actor-Based Environment) to a different structure.
-I want it to start with a brief motivation why and where the need for actors comes from.
-For this you need to mention deadlocks, async and mental overhead in developement.
-
-This motivation should be followed by an explenation how actors make developement better,
-what they are and how they work.
+TODO
 :::
 
-To handle the high complexity of multiple asynchronous connections (local WebSockets from the frontend, remote peer connections, bot simulation loops), the backend utilizes a custom **Tokio-based Actor Model** using channels for message passing.
+### Avoiding Deadlocks
 
-* **Sequential Execution:** By encapsulating connections within isolated actors, state changes are processed sequentially, completely preventing race conditions and thread synchronization bottlenecks.
-
-```mermaid
-flowchart TD
-    subgraph Custom Tokio Actor Model
-        Supervisor["Supervisor / Game Session Actor"]
-        
-        LocalWS1["Frontend WS Actor 1"]
-        LocalWS2["Frontend WS Actor 2"]
-        
-        RemotePeerA["P2P Actor (Player B)"]
-        RemotePeerB["P2P Actor (Player C)"]
-        
-        EngineActor["Game Engine Actor<br/>(Runs FSM, Verifies ZKPs)"]
-    end
-
-    LocalWS1 -- "Local User Action" --> Supervisor
-    LocalWS2 -- "State Sync" --> Supervisor
-    Supervisor -- "State Update" --> LocalWS1
-    Supervisor -- "State Update" --> LocalWS2
-
-    RemotePeerA -- "Remote Action + ZKP" --> Supervisor
-    Supervisor -- "State Sync / Broadcast" --> RemotePeerA
-    Supervisor -- "State Sync / Broadcast" --> RemotePeerB
-    
-    Supervisor <-->|"Action Evaluation &<br/>ZKP Generation/Verification"| EngineActor
-```
-
-* **Action Message Flow:**
-  1. The player submits an action in their WASM frontend.
-  2. The local `Frontend WS Actor` receives the message and forwards it via a `tokio::sync::mpsc` channel to the `Supervisor`.
-  3. The `Supervisor` queries the `Game Engine Actor` to evaluate the action, shuffles cards, and generates cryptographic zero-knowledge proofs.
-  4. The `Supervisor` updates the local state and broadcasts it to all connected `Frontend WS Actors` and remote `P2P Actors` via channels.
+::: danger
+TODO
+:::
 
 ## Breaking Cyclic-Dependencies Pattern
+
 To maintain code health and rapid build times in a Rust workspace, we enforce strict compilation boundaries to break compilation cycles.
 * **Shared Abstraction Layer:** To prevent the `frontend` and the `native_mcg` backend from relying on circular imports, we extract all core interfaces, domain objects, and communication enums into a standalone `shared` crate.
 * **Uni-directional Graph:** Both backend and frontend depend solely on the `shared` crate. The `shared` crate depends on absolutely nothing in the workspace, ensuring a clean, compilation-friendly directed acyclic graph (DAG).
 
-## Common Interface Pattern (Gleiche Datentypen verwenden)
+## Common Interface Pattern
+
 To preserve structural safety across different execution environments, all data flowing across boundaries must conform to contract-bound interface enums.
 * **Shared Core Datatypes:** We share identical, serialized enums across our WebAssembly browser runtime and the native Rust desktop runtime.
 * **Contract-Bound Sockets:** All message streams (local WebSockets, remote P2P, CLI streams) are strictly bound to identical enums defined in the `shared` crate:
   - `Frontend2BackendMsg`: Sent from the frontend to the local backend.
   - `Backend2FrontendMsg`: Broadcast from the backend to connected frontends.
   - `Peer2PeerMsg`: Distributed across backend peer-to-peer nodes.
-
-## Non-Blocking Async Actors Pattern
-The native backend connection supervisor relies on a lightweight, single-threaded execution loop.
-* **Async Safety Law:** Asynchronous message loops must never execute blocking synchronous calls or long-running computations, as this would freeze communication for all connected users.
-* **Offloaded Heavy Math:** Any heavy cryptographic computations (such as generating or verifying zero-knowledge proofs) or disk operations are offloaded to dedicated worker threadpools (e.g., using `tokio::task::spawn_blocking` or separate dedicated actors).
 
 ## Component Interaction Architecture
 
