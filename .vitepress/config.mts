@@ -40,7 +40,7 @@ export default withMermaid(
             { text: "Vision & Baselines", link: "/project/vision" },
             { text: "System Paradigms", link: "/project/paradigms" },
             { text: "Repository Components & Layout", link: "/project/repository-components-layout" },
-            { text: "Student Milestones Backlog", link: "/project/milestones" },
+            { text: "Student Milestones", link: "/project/milestones" },
             { text: "Technical Roadmap", link: "/project/roadmap" },
           ],
         },

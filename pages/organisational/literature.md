@@ -22,3 +22,5 @@ When starting a project, it is highly recommended to read the primary papers in 
 
 * **Schindelhauer, Christian. (1998). A Toolbox for Mental Card Games.** Technical Report A-98-14, University of Lübeck.
   - **Links:** [FreiDok Portal](https://freidok.uni-freiburg.de/data/242549) | [Download PDF](https://luca-giuzzi.unibs.it/corsi/Support/papers-cryptography/10.1.1.29.6679.pdf)
+* **Stamer, Heiko. (2005). Efficient Electronic Gambling: An Extended Implementation of the Toolbox for Mental Card Games.** WEWoRC 2005.
+  - **Links:** [Download PDF](http://www.nongnu.org/libtmcg/WEWoRC2005_proc.pdf) | [libtmcg Project Page](https://savannah.nongnu.org/projects/libtmcg/)

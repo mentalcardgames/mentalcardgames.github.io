@@ -101,7 +101,7 @@ and broadcasts the resulting state changes back to both the local frontend and r
 
 ## Concurrent Execution Environment
 
-### Notwork Connections
+### Network Connections
 
 ::: danger
 TODO

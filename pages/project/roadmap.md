@@ -6,27 +6,7 @@ outline: deep
 
 This roadmap acts as our engineering execution board, translating our high-level milestones and research objectives into active development tracks. It lists the current bugs, refactorings, and feature requests that shape the day-to-day work in the repository.
 
----
-
-## Active Development Tracks
-
-```mermaid
-gantt
-    title Monorepo Development Focus
-    dateFormat  YYYY-MM-DD
-    section Crate Decoupling
-    Engine Crate Extraction  :active, 2026-05-01, 30d
-    section Dynamic UI
-    egui general interface  :2026-05-15, 45d
-    section Cryptography
-    ZKP Verifiable Shuffling:2026-06-01, 60d
-    section Networking
-    Iroh DHT Discovery      :2026-06-15, 45d
-```
-
----
-
-## 1. Track 1: CGDL Engine & Monorepo Restructuring
+## CGDL Engine & Monorepo Restructuring
 
 We are focused on cleaning up compilation dependencies and building a highly reusable game engine.
 
@@ -38,9 +18,7 @@ We are focused on cleaning up compilation dependencies and building a highly reu
 * **Feature Requests:**
   - Standardize a generic `Engine` trait that the CGDL interpreter and future game modules will implement.
 
----
-
-## 2. Track 2: Decoupled & Dynamic UIs
+## Decoupled & Dynamic UIs
 
 Providing a dynamic interface that adapts to dynamic game engines.
 
@@ -49,9 +27,7 @@ Providing a dynamic interface that adapts to dynamic game engines.
 * **Feature Requests:**
   - Implement a terminal-based text client (`mcg-cli`) that connects to the backend over WebSockets to let developers rapidly execute state transitions without loading browser engines.
 
----
-
-## 3. Track 3: Card Cryptography & Zero-Knowledge Proofs
+## Card Cryptography & Zero-Knowledge Proofs
 
 Transitioning card distribution from trusted-server model to client-driven zero-knowledge equations.
 
@@ -61,9 +37,7 @@ Transitioning card distribution from trusted-server model to client-driven zero-
   - Integrate a proof-of-concept cryptographic library (e.g. `arkworks` ecosystem).
   - Benchmark proof generation and verification times on mobile web browsers to verify performance guardrails.
 
----
-
-## 4. Track 4: P2P Networking & Node Discovery
+## P2P Networking & Node Discovery
 
 Building reliable direct messaging and distributed synchronization across split-node players.
 
