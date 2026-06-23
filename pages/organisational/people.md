@@ -8,7 +8,7 @@ This page lists the active supervisors, maintainers and researchers contributing
 
 ## Project Management & Supervision
 
-### [@gSys](https://github.com/gSys1337)
+### [Jan Cichosz](mailto:jan.cichosz@email.uni-freiburg.de)
 * **Role:** Project Manager  (since 03.2026)
 * **Responsibilities:** Coordinator for student onboarding, project matching, code reviews, and architectural alignment. Feel free to reach out directly with topics and backlog inquiries.
 
