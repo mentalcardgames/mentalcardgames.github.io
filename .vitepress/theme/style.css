@@ -1,4 +1,7 @@
-/* Invert the Excalidraw SVG in dark mode so the black text/lines become bright and readable */
-html.dark .vp-doc img[src$="Component-Architecture.svg"] {
-  filter: invert(0.93) hue-rotate(180deg);
+/* Display the correct Component Architecture SVG based on the active theme */
+html:not(.dark) .vp-doc img[src*="Component-Architecture-dark"] {
+  display: none;
+}
+html.dark .vp-doc img[src*="Component-Architecture-light"] {
+  display: none;
 }

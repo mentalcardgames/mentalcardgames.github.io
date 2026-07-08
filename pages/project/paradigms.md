@@ -128,56 +128,11 @@ To preserve structural safety across different execution environments, all data 
   - `Backend2FrontendMsg`: Broadcast from the backend to connected frontends.
   - `Peer2PeerMsg`: Distributed across backend peer-to-peer nodes.
 
-## Component Interaction Architecture
+## Component Interaction Diagram
 
-The following diagram illustrates the component structure in the workspace, their relationships, and the communication paths within a single player's Node, as well as its connection to the outside world.
+The following diagram illustrates the component structure in the workspace,
+their relationships, and the communication paths within a single player's Node,
+as well as its connection to the outside world.
 
-```mermaid
-flowchart TB
-    subgraph BrowserContext["Browser Context"]
-        Frontend["Frontend (WASM) <br/>egui UI, state rendering, QR scanner"]
-    end
-
-    subgraph NativeNode["Native Node (Backend)"]
-        Backend["Native Backend Server <br/>HTTP/WS, Bot Manager, P2P Router"]
-        CLI["MCG CLI<br/>Headless WebSocket client"]
-    end
-
-    IrohNetwork((Iroh P2P Network))
-
-    subgraph CoreLibs["Shared & Core Libraries"]
-        Shared["Shared Protocol<br/>Frontend2BackendMsg, Backend2FrontendMsg"]
-        Crypto["Cryptography Layer<br/>Traits & primitives for verifiable actions"]
-        QRComm["QR Comm<br/>Network coding for QR transmission"]
-    end
-
-    subgraph FutureEngine["Game Engine (WIP)"]
-        Engine["Game Engine<br/>Executes game rules"]
-    end
-
-    subgraph DSL["Card Game DSL (CGDSL)"]
-        FrontEndDSL["CGDSL front_end<br/>Parser, Semantic Analysis, AST/IR"]
-        CodeGen["CGDSL code_gen<br/>Macros for AST boilerplate"]
-    end
-
-    %% Network Interfaces
-    Frontend <-->|WebSocket: Frontend2BackendMsg / Backend2FrontendMsg<br/>HTTP GET: WASM / Assets| Backend
-    CLI <-->|WebSocket: Frontend2BackendMsg / Backend2FrontendMsg| Backend
-    Backend <-->|Iroh QUIC: Peer2PeerMsg| IrohNetwork
-
-    %% Direct API / Library usages
-    Frontend -.->|Uses| QRComm
-    Backend -.->|Future: utilizes| Engine
-    Engine -.->|Compiles/Loads IR| DSL
-    FrontEndDSL -.->|Generates AST with| CodeGen
-
-    %% Shared dependencies
-    Frontend -.->|Uses types| Shared
-    Backend -.->|Uses types| Shared
-    CLI -.->|Uses types| Shared
-    Shared -.->|Extends with| Crypto
-```
-
-### Component Interaction Diagram
-
-![Component Interaction Architecture](Component-Architecture.svg)
+![Component Interaction Architecture](Component-Architecture-light.svg)
+![Component Interaction Architecture](Component-Architecture-dark.svg)
