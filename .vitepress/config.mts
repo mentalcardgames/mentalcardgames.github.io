@@ -38,10 +38,9 @@ export default withMermaid(
           items: [
             { text: "Overview & Mindmap", link: "/project/" },
             { text: "Vision & Baselines", link: "/project/vision" },
-            { text: "System Paradigms", link: "/project/paradigms" },
+            { text: "System Design", link: "/project/system-design" },
             { text: "Repository Components & Layout", link: "/project/repository-components-layout" },
             { text: "Student Milestones", link: "/project/milestones" },
-            { text: "Technical Roadmap", link: "/project/roadmap" },
           ],
         },
         {
@@ -56,19 +55,7 @@ export default withMermaid(
             { text: "Poker Game Implementation", link: "/component/poker" },
           ],
         },
-        {
-          text: "Examples & Templates",
-          items: [
-            { text: "Markdown Showcase", link: "/examples/markdown-examples" }
-          ],
-        },
-        {
-          text: "Archive",
-          items: [
-            { text: "Platform Considerations", link: "/archive/platforms" },
-            { text: "Old System Architecture", link: "/archive/architecture" },
-          ],
-        },
+
       ],
       search: {
         provider: "local",

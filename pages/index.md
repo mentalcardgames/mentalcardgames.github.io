@@ -11,7 +11,7 @@ hero:
       link: /organisational/lifecycle
     - theme: alt
       text: Cone
-      link: https://cone.informatik.uni-freiburg.de/tea/projects-and-theses-2025
+      link: https://uni-freiburg.de/tf-cs-cone/
     - theme: alt
       text: Contribute
       link: /organisational/contribute
@@ -21,13 +21,13 @@ features:
     title: About
     details: This is a project of the Albert-Ludwigs-Universität Freiburg, Germany
   - icon: 📄
-    title: Paper
-    details: Schindelhauer paper detailing what Mental Card Games are which provides the theoretical framework for what is being built here.
-    link: https://luca-giuzzi.unibs.it/corsi/Support/papers-cryptography/10.1.1.29.6679.pdf
-    linkText: read PDF
+    title: Literature
+    details: Information regarding foundational papers and internal resources.
+    link: /organisational/literature
+    linkText: Read PDFs
   - icon: 📄
     title: Projects
-    details: Slide detailing currently open projects
-    link:  https://archive.cone.informatik.uni-freiburg.de/teaching/project/Projects-Cone-2025.pdf#page=43
-    linkText: Read Slides
+    details: Overview of possible topics.
+    link: /project/milestones
+    linkText: Read Topics
 ---
