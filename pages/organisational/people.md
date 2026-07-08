@@ -8,7 +8,13 @@ This page lists the active supervisors, maintainers and researchers contributing
 
 ## Project Management & Supervision
 
+### Prof. Christian Schindelhauer
+
+* **Role:** Supervisor
+* **Responsibilities:** High-level academic guidance, project/thesis supervision, official evaluation and grading, and overall research alignment.
+
 ### [Jan Cichosz](mailto:jan.cichosz@email.uni-freiburg.de)
+
 * **Role:** Project Manager  (since 03.2026)
 * **Responsibilities:** Coordinator for student onboarding, project matching, code reviews, and architectural alignment. Feel free to reach out directly with topics and backlog inquiries.
 
