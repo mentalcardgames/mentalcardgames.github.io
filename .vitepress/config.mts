@@ -20,7 +20,7 @@ export default withMermaid(
       nav: [
         { text: "Home", link: "/" },
         { text: "Lifecycle", link: "/organisational/lifecycle" },
-        { text: "Blueprints", link: "/project/" },
+        { text: "Documentation", link: "/project/system-design" },
       ],
 
       sidebar: [

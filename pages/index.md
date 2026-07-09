@@ -20,6 +20,7 @@ features:
   - icon: 🏫
     title: About
     details: This is a project of the Albert-Ludwigs-Universität Freiburg, Germany
+    link: /organisational/lifecycle
   - icon: 📄
     title: Literature
     details: Information regarding foundational papers and internal resources.
