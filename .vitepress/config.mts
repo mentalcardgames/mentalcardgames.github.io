@@ -55,7 +55,6 @@ export default withMermaid(
             { text: "Poker Game Implementation", link: "/component/poker" },
           ],
         },
-
       ],
       search: {
         provider: "local",

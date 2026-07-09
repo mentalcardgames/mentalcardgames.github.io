@@ -95,19 +95,40 @@ When a remote peer sends a message, the controller processes it as an input even
 updates the appropriate models,
 and broadcasts the resulting state changes back to both the local frontend and remote peers.
 
-## Concurrent Execution Environment
+## Hybrid Execution Environment
 
-### Network Connections
+To keep game logic, state machines, and cryptographic protocols clean,
+decoupled, and easy to maintain, the backend utilizes a
+**Hybrid Execution Model**.
+This model splits responsibilities into an asynchronous network shell and a
+single-threaded synchronous core.
 
-::: danger
-TODO
-:::
+### Asynchronous Network Shell
 
-### Avoiding Deadlocks
+The network shell manages the concurrent, I/O-heavy communication boundaries of
+the local node.
+Running on an asynchronous runtime, each active channel spawns one
+lightweight task to handle communication.
 
-::: danger
-TODO
-:::
+Rather than modifying the application state directly, connection handlers in the
+async shell function as simple **actors**.
+They deserialize incoming bytes into structured enums (such as
+`Frontend2BackendMsg` and `Peer2PeerMsg`) and place them onto a single,
+centralized synchronous queue.
+
+### Synchronous Controller Core
+
+A dedicated OS thread runs a synchronous event loop that acts as the centralized
+**Controller** in the MVC design.
+It has sole, lock-free ownership of the game engine execution state and lobby
+configuration (the **Model**). 
+
+The Controller executes a continuous step-by-step event loop:
+1. It blocks on the incoming MPSC channel, waiting for message packets.
+2. It dequeues a message, identifies the actor, and applies the logic to the
+Model.
+3. It updates the state, formats state projections, and sends them to all peers
+as defined by protocols.
 
 ## Breaking Cyclic-Dependencies Pattern
 

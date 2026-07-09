@@ -17,7 +17,7 @@ workload.
 
 TODO: not finalized
 
-Anpassen an [Concurrent Execution Environment](#concurrent-execution-environment)
+Anpassen an [Synchronous Controller Environment](#synchronous-controller-environment)
 
 :::
 
@@ -49,20 +49,35 @@ step through states.
 - Ensure the existing Poker game remains fully playable using the new decoupled
 boundaries.
 
-### Concurrent Execution Environment
-
-::: danger
-
-TODO: not finalized
-
-:::
+### Synchronous Controller Environment
 
 **The Problem:**
 
+Currently, the codebase lacks a dedicated controller, making it difficult to
+grasp the backend architecture as there is no single point where all
+coordination and state management are located.
+Furthermore, this concurrency forces developers to write complex async Rust for
+logically synchronous operations.
+
 **Motivation:**
+
+Introducing a dedicated synchronous controller running sequentially in a
+single-threaded execution core eliminates concurrency issues such as deadlocks
+and race conditions.
+Additionally, a synchronous setting is much more familiar and intuitive to
+develop in, sparing students from the complexities of async task management and
+compiler lifetime friction.
 
 **Deliverables:**
 
+- Introduce a dedicated, synchronous **Controller** struct running in a
+sequential, synchronous execution setting.
+- Spawn a dedicated OS thread to execute the Controller's sequential loop.
+- Establish an MPSC queue to read incoming events from the async network shell
+to the Controller's thread.
+- Design the Controller to manage the core application state, holding state
+directly or delegating ownership to appropriate underlying models
+(such as `Lobby`, `Game`, or `Engine`).
 
 ## UI Rendering
 
@@ -244,6 +259,14 @@ executable.
 
 ## Cryptography & Zero-Knowledge Proofs (ZKP)
 
+::: danger
+
+TODO: not finalized
+
+Adjust for Connection & Message Authentication
+
+:::
+
 To support serverless card games, our project relies on distributed trust.
 Instead of relying on a trusted central authority or server to deal cards and
 maintain state secrets, we use cryptographic primitives and
@@ -251,6 +274,61 @@ Zero-Knowledge Proofs (ZKPs).
 This ensures that players can hide their private hands, perform verifiable 
 operations (such as shuffling or drawing), and prove their compliance with game
 rules without revealing any sensitive information.
+
+### Connection & Message Authentication
+
+**The Problem:**
+
+In a decentralized P2P network, game messages are broadcasted and
+relayed across multiple untrusted nodes.
+Without payload signing, any malicious node in the routing path can tamper with
+packets, replay old messages, or impersonate other players.
+
+Furthermore, while message signatures prove that a packet was authored by a
+specific cryptographic key, they do not verify *who* owns that key.
+A malicious peer can generate a new key pair, connect to the network, and claim
+to be a different player.
+Without a mechanism to bind cryptographic identities to physical peers, players
+remain vulnerable to impersonation and Sybil attacks.
+
+**Motivation:**
+
+To establish a trustless yet secure gaming session, we need a two-tier
+authentication stack:
+
+**Message-level Authentication:**
+Each node signs its outgoing message payloads using a private key
+(e.g., Ed25519).
+Relayed messages can then be independently verified by every peer in the
+network, ensuring non-repudiation and integrity even if the transport layer is
+compromised or messages are relayed through malicious actors.
+
+**Identity & Connection Verification:**
+To prevent key-spoofing and MITM attacks, players must be able to verify that
+the cryptographic keys used for message signing actually belong to their
+intended peers.
+By mapping a public key hash or connection fingerprint into a human-readable
+representation (such as an Emoji Hash, Identicon, or mnemonic phrase), players
+can verify the session's authenticity out-of-band.
+This verification does not have to block the connection setup;
+it can be performed at any point during the session to confirm the integrity of
+the player identities.
+
+**Deliverables:**
+
+- Implement local generation and secure storage of peer key pairs, linking them
+to player identities.
+- Design and integrate a packet signing protocol.
+Every outgoing backend P2P message payload must be signed, and all incoming
+messages must be verified against the sender's public key before being processed
+by the game engine.
+- Incorporate replay prevention mechanisms (e.g., monotonic sequence numbers, timestamps, or nonce challenges) within the signed payload.
+- Implement a connection fingerprinting system
+(e.g., hashing peer public keys into a deterministic set of emojis, a structured
+Identicon, or a mnemonic string).
+- Expose the connection fingerprints on both the backend and frontend.
+Provide a UI component allowing players to inspect and compare connection
+fingerprints at any time.
 
 ### Implementing the Toolbox
 
@@ -362,7 +440,7 @@ mutate the local engine state, instruct the Crypto Actor to generate the
 necessary ZKP for the mutation, and broadcast the action and proof to the peer
 network.
 
-## P2P Networking & Trust Architecture
+## Network & Communication Infrastructure
 
 ::: danger
 
@@ -372,44 +450,8 @@ TODO: not finalized
 
 Since each player runs a local node, the network layer must manage
 peer connections, node discovery, and state synchronization.
-
-### Message Authentication & Connection Verification
-
-::: danger
-
-TODO: not finalized
-
-:::
-
-**The Problem:**
-
-Nodes must verify that messages are authentic and protect against Man-in-the-Middle (MITM) attacks.
-
-**Motivation:**
-
-**Deliverables:**
-
-- Implement payload signing for all backend-to-backend P2P packets.
-- Implement a connection verification system (e.g., Emoji Hash, Identicon) on the frontend during connection setup.
-
-### Decentralized Node Discovery
-
-::: danger
-
-TODO: not finalized
-
-:::
-
-**The Problem:**
-
-Players must be able to find and connect to each other globally without relying on a static, centralized discovery server.
-
-**Motivation:**
-
-**Deliverables:**
-
-- Integrate Iroh's Distributed Hash Table (DHT) for peer-to-peer node discovery.
-- Handle automatic NAT traversal and hole-punching for global P2P connectivity.
+A clean, asynchronous message pipeline is required to handle high-frequency
+communication between the frontend client, the local backend, and remote nodes.
 
 ### Reliable Broadcast & Consensus (Forum System)
 
@@ -436,16 +478,6 @@ How to ensure that when one node broadcasts a state change, the entire mesh netw
 - Implement vector clocks or Lamport timestamps for ordering input sequences.
 - Specify and implement consensus state recovery plans.
 
-## Messaging Infrastructure & Communication Pipelines
-
-::: danger
-
-TODO: not finalized
-
-:::
-
-A clean, asynchronous message pipeline is required to handle high-frequency communication between the frontend client, the local backend, and remote nodes.
-
 ### Centralized Frontend Messaging Interface
 
 ::: danger
@@ -468,22 +500,31 @@ Individual frontend screens manage their own socket logic, leading to connection
 
 ### Actor-Inspired Backend Messaging Architecture
 
-::: danger
-
-TODO: not finalized
-
-:::
-
 **The Problem:**
 
-The native backend has to manage multiple concurrent socket and P2P connection channels without blocking main thread state calculations.
+The native backend has to concurrently manage multiple connection channels
+without blocking other calculations.
+Currently, these asynchronous connection tasks share state via locks,
+potentially causing deadlocks, and handling more than only connection related
+jobs.
 
 **Motivation:**
 
+To align connection handling with the asynchronous network shell, tasks should
+act as lightweight communication actors that feed the synchronous Controller
+without direct access to the state or locking constraints.
+
 **Deliverables:**
 
-- Build a lightweight, actor-inspired messaging architecture utilizing Tokio MPSC channels.
-- Spawn dedicated lightweight tasks for connection listeners that route messages to a central orchestrator.
+- Restructure connection listeners as lightweight async actor tasks.
+- Ensure all connection actors parse raw incoming buffers into typed messages
+(`Frontend2BackendMsg`, `Peer2PeerMsg`) and route them to the central Controller
+over a MPSC channel.
+- Implement a direct messaging mechanism enabling the Controller to send
+outgoing packets to specific open connections independently through the network
+layer.
+- Allow the Controller to dynamically manage connection lifecycles by initiating
+new connections and closing existing ones.
 
 ### More Communication Channels
 
@@ -499,17 +540,7 @@ TODO: not finalized
 
 **Deliverables:**
 
-## Component Action Interfaces & Protocol Contracts
-
-::: danger
-
-TODO: not finalized
-
-:::
-
-Clearly defined contract-based APIs ensure robust, testable interfaces between our internal software boundaries.
-
-### Comprehensive Component Command & Capability Contracts
+### Decentralized Node Discovery
 
 ::: danger
 
@@ -519,18 +550,14 @@ TODO: not finalized
 
 **The Problem:**
 
-As the codebase shifts toward decentralized, modular game swapping, the boundary interfaces must be strictly defined so components are easily replaceable.
+Players must be able to find and connect to each other globally without relying on a static, centralized discovery server.
 
 **Motivation:**
 
 **Deliverables:**
 
-- Formulate and implement serializable contract APIs inside the `shared` crate for:
-  - *Screens to Frontend Client*
-  - *Peer-to-Peer Backend to Backend*
-  - *Frontend Client to local Backend (RPC)*
-  - *Lobby Control commands*
-  - *Game Engine state step inputs*
+- Integrate Iroh's Distributed Hash Table (DHT) for peer-to-peer node discovery.
+- Handle automatic NAT traversal and hole-punching for global P2P connectivity.
 
 ## Project Deployment
 
