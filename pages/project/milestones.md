@@ -11,7 +11,7 @@ Rather than being tied to rigid academic ECTS levels,
 tasks are dynamically scaled and adjusted based on a student's expected
 workload.
 
-## Engine Extraction & Generalization
+## Miscellaneous
 
 ::: danger
 
@@ -78,6 +78,95 @@ to the Controller's thread.
 - Design the Controller to manage the core application state, holding state
 directly or delegating ownership to appropriate underlying models
 (such as `Lobby`, `Game`, or `Engine`).
+
+### Actor-Inspired Backend Messaging Architecture
+
+**The Problem:**
+
+The native backend has to concurrently manage multiple connection channels
+without blocking other calculations.
+Currently, these asynchronous connection tasks share state via locks,
+potentially causing deadlocks, and handling more than only connection related
+jobs.
+
+**Motivation:**
+
+To align connection handling with the asynchronous network shell, tasks should
+act as lightweight communication actors that feed the synchronous Controller
+without direct access to the state or locking constraints.
+
+**Deliverables:**
+
+- Restructure connection listeners as lightweight async actor tasks.
+- Ensure all connection actors parse raw incoming buffers into typed messages
+(`Frontend2BackendMsg`, `Peer2PeerMsg`) and route them to the central Controller
+over a MPSC channel.
+- Implement a direct messaging mechanism enabling the Controller to send
+outgoing packets to specific open connections independently through the network
+layer.
+- Allow the Controller to dynamically manage connection lifecycles by initiating
+new connections and closing existing ones.
+
+### Frontend Encapsulated & Event-Driven Networking
+
+**The Problem:**
+
+Screens currently have direct, raw access to the `WebSocketConnection` in
+`AppInterface`, allowing them to manually control the connection lifecycle,
+register custom callbacks, or send raw serialized payloads.
+Furthermore, the application forces continuous rendering
+(`ctx.request_repaint()`) every frame even when idle, and the backend connection
+address must be manually typed or hardcoded rather than being dynamically
+resolved from the browser context.
+
+**Motivation:**
+
+A clean interface boundary should hide the communication details (WebSockets)
+behind a high-level, typed messaging API.
+Transitioning to event-driven/reactive repainting prevents high CPU/battery
+utilization in WASM/browser environments.
+
+**Deliverables:**
+
+- Update initialization to extract the host/port from the browser's URL location
+(e.g. using `web_sys::window()`) and save it to the global client settings.
+- Remove the need for screens to manually connecting to the backend.
+- Remove direct access to `WebSocketConnection` from `AppInterface`.
+- Expose only high-level, typed messaging methods on `AppInterface`
+(e.g. `send_message(message)`, `send_action(action)`) so screens never touch the
+raw socket.
+- Disable the continuous/unconditional `ctx.request_repaint()` in `App::update`.
+- Update `WebSocketConnection`'s event callbacks (`onmessage`, `onerror`,
+`onclose`) to automatically invoke `ctx.request_repaint()` on the active context
+when new data is received.
+- Remove `ConnectionState` as its Message-Queue is not used.
+- Decide if `ConnectionStatus` can be incorporated into the websocket type.
+
+### Frontend State Decoupling
+
+**The Problem:**
+
+Currently, the `AppInterface` exposes the global `ClientState` monolith directly
+to all screens.
+Some screens store their page-specific rendering and setup states
+(e.g. temporary text edit buffers, ready toggles) in this global struct.
+This pollutes the global state, creates tight architectural coupling, and makes
+it difficult for multiple developers to work on separate screens concurrently.
+
+**Motivation:**
+
+Encapsulating the application state ensures pages are modular, self-contained,
+and easier to write and test in isolation.
+`ClientState` should only govern application-wide parameters (like settings or
+active routing).
+
+**Deliverables:**
+
+- Audit existing screens (e.g. Poker, Lobby, and Setup screens) and move
+screen-specific states (such as player ready indicators and local editing buffers) directly into their respective `ScreenWidget` structs.
+- Retain only application-wide settings (like player credentials and server configuration) in `ClientState`.
+- Make `ClientState` private/internal within `AppInterface`.
+- Expose only high-level, structured helper methods on `AppInterface` (e.g. for retrieving global configuration properties or queueing application-level navigation events).
 
 ## UI Rendering
 
@@ -477,54 +566,6 @@ How to ensure that when one node broadcasts a state change, the entire mesh netw
 - Implement robust retry and confirmation pipelines for direct P2P connections.
 - Implement vector clocks or Lamport timestamps for ordering input sequences.
 - Specify and implement consensus state recovery plans.
-
-### Centralized Frontend Messaging Interface
-
-::: danger
-
-TODO: not finalized
-
-:::
-
-**The Problem:**
-
-Individual frontend screens manage their own socket logic, leading to connection drops when navigating pages and tight architectural coupling.
-
-**Motivation:**
-
-**Deliverables:**
-
-- Establish a single, centralized socket listener thread in the WASM client.
-- Provide an API allowing individual screens to register callbacks for specific message types.
-- Decouple screen rendering entirely from connection lifecycle states.
-
-### Actor-Inspired Backend Messaging Architecture
-
-**The Problem:**
-
-The native backend has to concurrently manage multiple connection channels
-without blocking other calculations.
-Currently, these asynchronous connection tasks share state via locks,
-potentially causing deadlocks, and handling more than only connection related
-jobs.
-
-**Motivation:**
-
-To align connection handling with the asynchronous network shell, tasks should
-act as lightweight communication actors that feed the synchronous Controller
-without direct access to the state or locking constraints.
-
-**Deliverables:**
-
-- Restructure connection listeners as lightweight async actor tasks.
-- Ensure all connection actors parse raw incoming buffers into typed messages
-(`Frontend2BackendMsg`, `Peer2PeerMsg`) and route them to the central Controller
-over a MPSC channel.
-- Implement a direct messaging mechanism enabling the Controller to send
-outgoing packets to specific open connections independently through the network
-layer.
-- Allow the Controller to dynamically manage connection lifecycles by initiating
-new connections and closing existing ones.
 
 ### More Communication Channels
 

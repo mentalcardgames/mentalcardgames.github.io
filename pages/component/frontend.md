@@ -76,10 +76,9 @@ Once started, the application enters its main loop. The `App` struct (in `fronte
 
 -   **`App::new`**: Initializes the global state (`ClientState`), registers screens, and sets up the router.
 -   **`App::update`**: 
-    1.  Processes pending messages (from WebSocket/Network). This is currently omitted.
-    2.  Handles URL changes (routing).
-    3.  Renders the top navigation bar.
-    4.  Delegates rendering to the active `ScreenWidget` based on the current path.
+    1.  Handles URL changes (routing).
+    2.  Renders the top navigation bar.
+    3.  Delegates rendering to the active `ScreenWidget` based on the current path.
 
 ### Event Handling
 
@@ -93,39 +92,81 @@ Local state (like specific UI toggles or temporary input buffers) should remain 
 
 ### Networking (Backend Connection)
 
-Communication with the backend is handled via WebSockets using the `WebSocketConnection` struct (in `frontend/src/game/websocket.rs`).
+Communication with the backend is handled via WebSockets using the `WebSocketConnection` struct (in [websocket.rs](file:///c:/Users/janci/Code/mcg/frontend/src/game/websocket.rs)).
 
-#### Connecting
-
-You connect by providing callbacks for messages, errors, and disconnection. This is typically done within a screen or a connection manager.
+A single `WebSocketConnection` is globally owned by the main `App` struct
+(in [game.rs](file:///c:/Users/janci/Code/mcg/frontend/src/game.rs#L56) as the
+`ws_connection` field).
 
 ```rust
-let mut ws = WebSocketConnection::new();
-ws.connect(
-    "127.0.0.1:3000",
-    players_config,
-    move |msg: ServerMsg| {
-        // Handle incoming message (e.g. queue it to ClientState)
-    },
-    move |err| { log(err); },
-    move |reason| { log(reason); }
-);
+pub struct AppInterface<'a> {
+    pub events: &'a mut Vec<crate::game::AppEvent>,
+    pub app_state: &'a mut crate::store::ClientState,
+    pub ws: &'a mut WebSocketConnection,
+}
 ```
 
-#### Receiving Messages
+#### Idempotent Listener Registration
 
-Currently, you need to have the `WebSocketConnection` as a field in your screen.
+Instead of setting callbacks on every connection call, each screen registers its
+callbacks once.
+The registration is idempotent; if the key is already registered, it is a no-op:
 
-1.  **Callback**: The WebSocket entry receives a message.
-2.  **Queueing**: The message is pushed to a thread-safe queue.
-3.  **Processing**: The main `App::update` or the screen's `ui` method pops messages from the queue and applies them to the state.
+::: danger
+
+I don't think that registering a callback should be a no-op in case of failure.
+Being unable to register must be noticed.
+:::
+
+```rust
+// In a screen's ui() method
+
+let on_msg = move |msg: Backend2FrontendMsg| { ... };
+let on_err = move |err: String| { ... };
+let on_cls = move |cls: String| { ... };
+
+// Establish connection if not already open
+if !app_interface.ws.is_connected() {
+    app_interface.ws.connect(&server_address, players);
+}
+
+// Register callbacks once
+app_interface.ws.register_listener_once("/my-screen-path", on_msg, on_err, on_cls);
+```
+
+#### Active Listener Routing
+
+To prevent conflicts when multiple screens have registered listeners, the
+centralized `WebSocketConnection` routes incoming messages exclusively to the
+active screen.
+
+Screens specify themselves as the active listener in the `ui()` method:
+```rust
+app_interface.ws.set_active_listener(Some("/my-screen-path"));
+```
+
+::: danger
+
+Screen shouldn't specify themself whether or not they are active.
+`App` should take care of this.
+:::
+
+During screen transitions, the screen deactivates its listener inside `on_exit()`:
+```rust
+fn on_exit(&mut self, app_interface: &mut AppInterface) {
+    // Deactivate listener to prevent handling messages intended for other screens
+    app_interface.ws.set_active_listener(None);
+}
+```
+
+Error and close callbacks will route to the active listener first, falling back
+to all registered listeners if no active listener is set.
 
 #### Sending Messages
 
-Sending is straightforward using the `WebSocketConnection::send_msg` method, which serializes `ClientMsg` to JSON.
-
+To send a message, invoke the `send_msg` method on the connection:
 ```rust
-ws.send_msg(&ClientMsg::Action { ... });
+app_interface.ws.send_msg(&Frontend2BackendMsg::Action { ... });
 ```
 
 ### Drag & Drop (DnD)
