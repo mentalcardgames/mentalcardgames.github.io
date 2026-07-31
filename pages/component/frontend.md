@@ -4,329 +4,398 @@ outline: deep
 
 # Frontend
 
-**frontend** is a Rust-based WebAssembly (WASM) framework designed for visualizing card games. It leverages `egui` for the user interface, providing a flexible and responsive environment for card game development and prototyping.
+**frontend** is the browser client of MCG.
+It is written in Rust, compiled to WebAssembly (WASM), and renders the user
+interface with `egui`/`eframe`.
+The crate contains application orchestration, screen implementations, reusable
+widgets, browser integration, and the WebSocket boundary to the local backend.
+
+The crate is named `frontend`.
+It is distinct from the Card Game Description Language compiler crate named
+`front_end`.
+
+## Module Layout
+
+The source tree separates application-wide orchestration from screens and
+reusable widgets:
+
+```text
+frontend/src/
+├─ app.rs                  # FrontendApp, FrontendInterface, FrontendEvent
+├─ app/
+│  ├─ state.rs             # FrontendState
+│  └─ websocket.rs         # WebSocketConnection and MessageSender
+├─ screens.rs              # Screen module declarations and re-exports
+├─ screens/                # Concrete screens and screen-local state
+├─ widgets/
+│  ├─ mod.rs               # Widget module declarations
+│  ├─ screen.rs            # Screen traits, typed IDs, and registry
+│  ├─ card.rs              # Card traits and implementations
+│  ├─ field.rs             # Field traits and implementations
+│  ├─ camera.rs            # Browser camera lifecycle and frame capture
+│  ├─ qr_scanner.rs        # QR decoding UI
+│  ├─ hardcoded_cards.rs   # Preconfigured decks
+│  └─ theme.rs             # Theme constants and DPI helpers
+├─ router.rs               # Browser URL routing
+└─ lib.rs                  # WASM entry point
+```
 
 ## Architecture & API
 
-The core interaction logic is built around a set of traits and structs that define how screens, cards, and fields behave.
+### Application Types
 
-### Key Traits
+- **`FrontendApp`** @
+  [frontend/src/app.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/app.rs)
+  implements `eframe::App`.
+  It owns the current screen, screen instances, global frontend state, router,
+  WebSocket connection, and inbound event channels.
+- **`FrontendInterface`** @
+  [frontend/src/app.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/app.rs)
+  is the capability boundary passed to screens.
+  Its fields are private.
+  Screens use methods such as `change_screen`, `send_msg`, `connect`,
+  `create_game`, and `start_game` instead of accessing the owning `FrontendApp`
+  or raw WebSocket.
+- **`FrontendEvent`** @
+  [frontend/src/app.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/app.rs)
+  represents deferred application-level operations.
+  It currently supports typed screen changes, starting the generic
+  drag-and-drop game, and exiting a game.
+- **`FrontendState`** @
+  [frontend/src/app/state.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/app/state.rs)
+  contains application-wide data:
+  player name, server address, DPI settings, theme selection, and the screen
+  registry.
 
--   **`ScreenWidget`** @ [frontend/src/game/screens/mod.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/screens/mod.rs):
-    -   **Purpose**: Defines the **rendering logic** and behavior of a screen.
-    -   **Usage**: Implement this trait to create new views (e.g., Main Menu, Game Setup). The `ui` method, called every frame, handles both logic updates and UI drawing.
-    -   **Navigation**: Screens can request transitions to other screens via the `AppInterface` (passed as a parameter to `ui`). See [AppInterface](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/screens/mod.rs).
+### Screen Traits and Registry
 
--   **`ScreenDef`** @ [frontend/src/game/screens/mod.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/screens/mod.rs):
-    -   **Purpose**: Defines the **metadata** and factory for a screen.
-    -   **Usage**: Implement this to provide static information (path, display name, icon) and a constructor function. This allows the `ScreenRegistry` to list and instantiate screens dynamically.
+- **`ScreenWidget`** @
+  [frontend/src/widgets/screen.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/widgets/screen.rs)
+  defines the runtime behavior of a screen:
+  - `ui` renders the screen and handles user input.
+  - `on_message` receives typed `Backend2FrontendMsg` values dispatched by
+    `FrontendApp`.
+  - `on_exit` releases screen-owned resources before navigation.
+- **`ScreenDef`** defines compile-time metadata and a factory for a screen.
+- **`ScreenId`** wraps Rust's `TypeId`. Navigation therefore uses screen types
+  rather than path strings.
+- **`ScreenRegistry`** maps `ScreenId`s and URL paths to metadata and factories.
+  Screen instances are created lazily.
+- **`impl_screen_def!`** generates a `ScreenDef` implementation for screen
+  types that implement `Default`.
 
--   **`CardEncoding`** @ [frontend/src/game/card.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/card.rs):
-    -   **Purpose**: Acts as an interface to make custom types accessible as cards for mental card games in academia.
-    -   **Usage**: Implement this in order to translate specific cards (e.g., Suit/Rank, ID) into an encoding used by mental card games. It provides operations like to both check whether a card is masked (face down) or open (face up) and to mask or unmask it.
+### Card and Field Traits
 
--   **`CardConfig`** @ [frontend/src/game/card.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/card.rs):
-    -   **Purpose**: Defines the visual representation of a card.
-    -   **Usage**: Implement this to tell the system how to render a card specifically. It maps the logical `CardEncoding` to an `egui::Image`.
+- **`CardEncoding`** @
+  [frontend/src/widgets/card.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/widgets/card.rs)
+  maps a card to the encoding required by mental-card-game operations and
+  exposes masking/unmasking behavior.
+- **`CardConfig`** @
+  [frontend/src/widgets/card.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/widgets/card.rs)
+  defines visual card rendering, cardinality, encoding width, and natural size.
+- **`FieldWidget`** @
+  [frontend/src/widgets/field.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/widgets/field.rs)
+  defines a renderable card container.
+- **`SimpleCard`**, **`DirectoryCardType`**, and **`SimpleField`** are the
+  provided implementations.
+  `SimpleField` supports stacked and horizontal layouts as well as selection
+  and drag-and-drop.
+- **`hardcoded_cards`** @
+  [frontend/src/widgets/hardcoded_cards.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/widgets/hardcoded_cards.rs)
+  provides preconfigured decks backed by media files served by the backend.
 
--   **`FieldWidget`** @ [frontend/src/game/field.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/field.rs):
-    -   **Purpose**: Defines a container that holds cards.
-    -   **Usage**: Used to render areas where cards exist, such as a draw pile, discard pile, or a player's hand.
+## Initialization & Lifecycle
 
-### Core Structs & Modules
-
--   **`App`** @ [frontend/src/game.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game.rs):
-    -   The main entry point that manages the registration and switching of `ScreenWidget`s via the `ScreenRegistry`.
-    -   **Entry Point**: The `update` method (from the `eframe::App` trait) is the main loop where the application state is updated and the UI is rendered.
-
-- **`ClientState`** @ [frontend/src/store.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/store.rs):
-    - Holds the important state information of the client e.g. backend address, network messages, etc.
-
--   **`SimpleField`** @ [frontend/src/game/field.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/field.rs):
-    -   A full implementation of `FieldWidget`.
-    -   **Purpose**: Serves as a default container for card storage.
-    -   **Features**: Supports `Stack` (cards on top of each other) and `Horizontal` (cards side-by-side) layouts. Handles the drag-and-drop logic for cards within or between fields.
-
--   **`SimpleCard`** @ [frontend/src/game/card.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/card.rs):
-    -   An implementation of `CardEncoding` that enumerate cards by a number and support masking and unmasking operations.
-
--   **`DirectoryCardType`** @ [frontend/src/game/card.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/game/card.rs):
-    -   A full implementation of `CardConfig` used for `SimpleCard`.
-    -   **Features**: Configuring a deck where card images are loaded from the backend at a specific directory.
-
--   **`hardcoded_cards`** (Module) @ [frontend/src/hardcoded_cards.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/hardcoded_cards.rs):
-    -   **Purpose**: Provides factory functions to create pre-configured card decks (e.g., standard 52-card deck). This is not a struct but a helper module to easily instantiate `DirectoryCardType` with standard assets.
-
-### Initialization & Lifecycle
-
-The frontend application starts via the `start` function in `frontend/src/lib.rs`, which is marked with `#[wasm_bindgen]`.
-
-> **Note**: The `#[wasm_bindgen]` attribute is critical here. It exposes this Rust function to the JavaScript environment, allowing the browser's JS code to call `frontend.start()` to launch the WebAssembly application.
+The browser calls the `#[wasm_bindgen]`-exported `start` function in
+`frontend/src/lib.rs`.
+It installs image loaders, creates a `FrontendApp`, and starts the `eframe` web
+runner:
 
 ```rust
-// frontend/src/lib.rs
-#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn start(canvas: HtmlCanvasElement) -> Result<(), JsValue> {
-    // ... setup and start eframe ...
+    let init = Box::new(|cc: &eframe::CreationContext| {
+        install_image_loaders(&cc.egui_ctx);
+        let app = FrontendApp::new(cc.egui_ctx.clone());
+        Ok(Box::new(app) as Box<dyn eframe::App>)
+    });
+    start_game(canvas, init)
 }
 ```
 
-Once started, the application enters its main loop. The `App` struct (in `frontend/src/game.rs`) implements `eframe::App`, and its `update` method is called every frame by the browser/renderer.
+`FrontendApp` implements the `eframe::App` trait.
+Its `update` method is part of  eframe's application lifecycle and is invoked
+by the framework whenever a new UI frame must be produced.
+It therefore serves as the frontend's main loop.
 
--   **`App::new`**: Initializes the global state (`ClientState`), registers screens, and sets up the router.
--   **`App::update`**: 
-    1.  Handles URL changes (routing).
-    2.  Renders the top navigation bar.
-    3.  Delegates rendering to the active `ScreenWidget` based on the current path.
+For each `FrontendApp::update` call, the application:
 
-### Event Handling
+1. processes pending input and messages,
+2. renders the current UI,
+3. and applies queued application events.
 
-The `AppInterface` struct is passed to every screen's `ui` method. It holds a mutable reference to the `AppEvent` queue. Screens push events (like `ChangeRoute` or `StartGame`) to this queue. After the screen's `ui` method returns, `App::update` drains this queue and executes the events. This pattern avoids borrow checker conflicts where a screen tries to mutate the `App` that owns it.
+## State Management
 
-### State Management
+Only application-wide data belongs in `FrontendState`.
+Screen-specific rendering data, edit buffers, connection feedback, and game
+projections are owned by their corresponding `ScreenWidget`.
 
-Global state is held in `ClientState` (in `frontend/src/store.rs`). It contains data shared across the application, such as the current game state, connection status, and player settings. It is accessible via `AppInterface.state()` in any screen.
+For example, `PokerOnlineScreen` owns its `Option<PokerStatePublic>` and
+connection manager.
+QR screens own their scanners and `Epoch` values.
+These values are no longer kept in a global client-state monolith.
 
-Local state (like specific UI toggles or temporary input buffers) should remain inside the specific `ScreenWidget` struct.
+`FrontendInterface::state()` and `state_mut()` currently expose
+`FrontendState`; further narrowing this API into purpose-specific accessors is
+tracked by the
+[Frontend State Decoupling](../project/milestones.md#frontend-state-decoupling)
+milestone.
 
-### Networking (Backend Connection)
+## Typed Navigation and Screen Events
 
-Communication with the backend is handled via WebSockets using the `WebSocketConnection` struct (in [websocket.rs](file:///c:/Users/janci/Code/mcg/frontend/src/game/websocket.rs)).
-
-A single `WebSocketConnection` is globally owned by the main `App` struct
-(in [game.rs](file:///c:/Users/janci/Code/mcg/frontend/src/game.rs#L56) as the
-`ws_connection` field).
+Screens request navigation by target type:
 
 ```rust
-pub struct AppInterface<'a> {
-    pub events: &'a mut Vec<crate::game::AppEvent>,
-    pub app_state: &'a mut crate::store::ClientState,
-    pub ws: &'a mut WebSocketConnection,
+impl FrontendInterface {
+  pub fn change_screen<T: ScreenDef + 'static>(&mut self) { ... }
 }
 ```
 
-#### Idempotent Listener Registration
+`FrontendInterface` converts the target type into a `ScreenId` and queues a
+`FrontendEvent::ChangeScreen`.
+`FrontendApp` validates it against the registry, calls `on_exit` on the old
+screen, and updates the router with the registered path.
 
-Instead of setting callbacks on every connection call, each screen registers its
-callbacks once.
-The registration is idempotent; if the key is already registered, it is a no-op:
+This keeps URL strings in `ScreenMetadata` and removes route "magic strings"
+from screen logic.
 
-::: danger
+## Networking
 
-I don't think that registering a callback should be a no-op in case of failure.
-Being unable to register must be noticed.
-:::
+### Connection Ownership
+
+A single **`WebSocketConnection`** @
+[frontend/src/app/websocket.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/app/websocket.rs)
+is owned by `FrontendApp`.
+Screens never receive the raw `web_sys::WebSocket`.
+They interact through `FrontendInterface` methods or the narrow `MessageSender`
+trait.
+
+Connecting installs application-level `onopen`, `onmessage`, `onerror`, and
+`onclose` callbacks.
+
+### Incoming Messages
+
+The browser callback deserializes text frames into `Backend2FrontendMsg` and
+sends them through a standard MPSC channel:
+
+```text
+web_sys::WebSocket::message
+        │
+        ▼
+mpsc::Sender<Backend2FrontendMsg>
+        │
+        ▼
+FrontendApp::dispatch_messages
+        │
+        ▼
+active ScreenWidget::on_message
+```
+
+Screens neither register listener closures nor select an "active listener".
+`FrontendApp` owns routing and dispatches each queued message to the active
+screen.
+
+Error and close events use separate MPSC channels and are logged by
+`FrontendApp`.
+
+### Sending Messages
+
+Screens send typed protocol values through the interface:
 
 ```rust
-// In a screen's ui() method
-
-let on_msg = move |msg: Backend2FrontendMsg| { ... };
-let on_err = move |err: String| { ... };
-let on_cls = move |cls: String| { ... };
-
-// Establish connection if not already open
-if !app_interface.ws.is_connected() {
-    app_interface.ws.connect(&server_address, players);
+impl FrontendInterface {
+  pub fn send_msg(&mut self, msg: Frontend2BackendMsg) { ... }
 }
-
-// Register callbacks once
-app_interface.ws.register_listener_once("/my-screen-path", on_msg, on_err, on_cls);
 ```
 
-#### Active Listener Routing
+Specialized operations such as `create_game` are also exposed.
+The serialized WebSocket payload remains private to `WebSocketConnection`.
 
-To prevent conflicts when multiple screens have registered listeners, the
-centralized `WebSocketConnection` routes incoming messages exclusively to the
-active screen.
+### Event-Driven Repainting
 
-Screens specify themselves as the active listener in the `ui()` method:
+The application does not request a repaint unconditionally on every update.
+Successful incoming WebSocket messages call `egui::Context::request_repaint`.
+Time-dependent screens and widgets have to request their own repaint while
+active;
+for example, the QR scanner repaints while its camera popup is open and the QR
+transmitter schedules its next frame.
+
+## Drag & Drop
+
+The generic game demo uses `egui` drag-and-drop while keeping widget rendering
+separate from game-state mutation.
+
+1. `SimpleField` in `frontend/src/widgets/field.rs` publishes a
+   `DNDSelector::Index` payload and records the local card index.
+2. `Game` in `frontend/src/screens/game.rs` translates the local index into a
+   logical source or destination (`Player` or `Stack`).
+3. Once both endpoints are present, `GameState::move_card` mutates the fields
+   and the temporary drag/drop state is cleared.
+
 ```rust
-app_interface.ws.set_active_listener(Some("/my-screen-path"));
-```
-
-::: danger
-
-Screen shouldn't specify themself whether or not they are active.
-`App` should take care of this.
-:::
-
-During screen transitions, the screen deactivates its listener inside `on_exit()`:
-```rust
-fn on_exit(&mut self, app_interface: &mut AppInterface) {
-    // Deactivate listener to prevent handling messages intended for other screens
-    app_interface.ws.set_active_listener(None);
-}
-```
-
-Error and close callbacks will route to the active listener first, falling back
-to all registered listeners if no active listener is set.
-
-#### Sending Messages
-
-To send a message, invoke the `send_msg` method on the connection:
-```rust
-app_interface.ws.send_msg(&Frontend2BackendMsg::Action { ... });
-```
-
-### Drag & Drop (DnD)
-
-The system leverages `egui`'s native drag and drop capabilities to allow intuitive card interaction. The architecture separates the **Visual Widget** (the Field) from the **Game Logic** (the State).
-
-1.  **The Payload (`DNDSelector`)**:
-    We define a specific payload type that carries information about what is being dragged.
-    ```rust
-    // frontend/src/game/screens/game.rs
-    pub enum DNDSelector {
-        Player(usize, usize), // (Player Index, Card Index)
-        Stack,                // From the top of the stack
-        Index(usize),         // Generic index
-    }
-    ```
-
-2.  **The Source (SimpleField)**:
-    When drawing the field, if a user starts dragging a card, the field acts as the source and sets the payload.
-    ```rust
-    // frontend/src/game/field.rs @ SimpleField::draw_horizontal
-    if ui.response().drag_started() {
-        // Set the payload to indicate WHICH card is being dragged
-        ui.response().dnd_set_drag_payload(DNDSelector::Index(idx));
-    }
-    ```
-
-3.  **The Detection (Game Loop)**:
-    In your main game loop (`ScreenWidget::ui`), you check if a payload was released over a specific area (the drop target).
-    ```rust
-    // frontend/src/game/screens/game.rs @ impl ScreenWidget::ui
-    // Draw the stack (the drop target)
-    let response = ui.add(stack.draw());
-
-    // Check if something valid was dropped onto the stack
-    if let Some(payload) = response.dnd_release_payload::<DNDSelector>() {
-        // 'self.drop' stores WHERE we dropped it
-        self.drop = Some(DNDSelector::Stack);
-    }
-    ```
-
-4.  **The Mutation**:
-    Finally, you resolve the move by modifying the game state. This usually happens at the end of the update loop.
-    ```rust
-    // frontend/src/game/screens/game.rs @ impl ScreenWidget::ui
-    if let (Some(source), Some(destination)) = (self.drag, self.drop) {
-        // Move the card data from source field to destination field
-        game_state.move_card(source, destination);
-        
-        // Reset state
-        self.drag = None;
-        self.drop = None;
-    }
-    ```
-
-This separation allows for validation logic (e.g., checking if a move is legal before applying it) to be inserted easily in the `The Mutation` step.
-
-### QR Code Scanning
-
-The project uses the `QrScannerPopup` struct (in `frontend/src/qr_scanner.rs`) to handle camera input and QR detection directly in the browser.
-
--   **Usage**: The `QrScannerPopup` manages the camera and updates a target string buffer with the result.
--   **Integration**:
-    ```rust
-    // In your screen struct
-    struct MyScreen {
-        scanner: QrScannerPopup,
-        result: String,
-        raw_result: Vec<u8>
-    }
+impl ScreenWidget for Game<DirectoryCardType> {
+  fn ui(&mut self, app_interface: &mut FrontendInterface, ui: &mut egui::Ui, frame: &mut Frame) {
+    // ...
     
-    // In your ui() method
-    impl ScreenWidget for MyScreen {
-        fn ui(
-            &mut self,
-            _app_interface: &mut AppInterface,
-            ui: &mut egui::Ui,
-            _frame: &mut eframe::Frame,
-        ) {
-            // ...
-            self.scanner.button_and_popup(ui, ctx, &mut self.result, &mut self.raw_result);
-            // ...
-        }
+    if let (Some(source), Some(destination)) = (self.drag, self.drop) {
+      self.game_state.move_card(source, destination);
+      self.drag = None;
+      self.drop = None;
     }
-    ```
-    This single call renders the "Scan QR" button and handles the popup overlay, camera permissions, and decoding logic.
+    // ...
+
+  }
+}
+```
+
+## Camera and QR Scanning
+
+QR support is split into two reusable widgets:
+
+- **`Camera`** @
+  [frontend/src/widgets/camera.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/widgets/camera.rs)
+  owns the `MediaStream`, video element, canvas, frame texture, and front/back
+  camera selection.
+  Starting and stopping are safe across asynchronous camera initialization.
+- **`QrScanner`** @
+  [frontend/src/widgets/qr_scanner.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/widgets/qr_scanner.rs)
+  renders the scanner popup, captures every frame for preview, and attempts QR
+  decoding every fifth frame.
+
+`QrDecodeTarget` selects text or binary output:
+
+```rust
+use crate::widgets::qr_scanner::{QrDecodeTarget, QrScanner};
+
+#[derive(Default)]
+struct MyScreen {
+    scanner: QrScanner,
+    text: String,
+    bytes: Vec<u8>,
+}
+
+impl ScreenWidget for MyScreen {
+  fn ui(&mut self, app_interface: &mut FrontendInterface, ui: &mut egui::Ui, frame: &mut Frame) {
+    // Text mode closes after the first successful decode.
+    self.scanner.button_and_popup(
+      ui,
+      ui.ctx(),
+      QrDecodeTarget::String(&mut self.text),
+    );
+
+    // Binary mode remains open so a stream of QR frames can be collected.
+    self.scanner.button_and_popup(
+      ui,
+      ui.ctx(),
+      QrDecodeTarget::Binary(&mut self.bytes),
+    );
+  }
+}
+```
 
 ## Extensibility
 
-### How to add a custom screen?
+### How to Add a Screen
 
-Screens are distinct views (e.g., Main Menu, Poker Table, QR Scanner). To add a new screen, you need to implement both the `ScreenWidget` (logic/view) and `ScreenDef` (metadata/registration) traits.
-
-1.  **Create the Screen Struct**: Implement `ScreenWidget` (for rendering) and `ScreenDef` (for registration). Alternatively you can use the `impl_screen_def!` macro to generate the `ScreenDef` implementation.
-    ```rust
-    // frontend/src/game/screens/my_screen.rs
-    pub struct MyScreen;
-    
-    impl ScreenWidget for MyScreen {
-        fn ui(&mut self, app: &mut AppInterface, ui: &mut egui::Ui, _frame: &mut Frame) {
-            ui.label("Hello from MyScreen!");
-            if ui.button("Back").clicked() {
-                app.queue_event(AppEvent::ChangeRoute("/".into()));
-            }
-        }
-    }
-    
-    impl ScreenDef for MyScreen {
-        fn metadata() -> ScreenMetadata {
-            ScreenMetadata {
-                path: "/myscreen",
-                display_name: "My Screen",
-                icon: "🌟",
-                description: "A custom example screen",
-                show_in_menu: true,
-            }
-        }
-        fn create() -> Box<dyn ScreenWidget> { Box::new(MyScreen) }
-    }
-    ```
-
-2.  **Register the Screen**: Add it to `ScreenRegistry::new` in `frontend/src/game/screens/mod.rs`.
-    ```rust
-    // frontend/src/game/screens/mod.rs
-    pub fn new() -> Self {
-        // ...
-        reg.register::<MyScreen>();
-        // ...
-    }
-    ```
-
-### How to add a custom card type?
-
-The trait `CardEncoding` is used as an interface to provide data that can be used in a mental card game setting.
-The trait `CardConfig` is used for visual rendering. The key point is to return `egui::Image` in the `CardConfig::img` method so the systems knows which image to display as your card.
+Create the screen under `frontend/src/screens/`, implement `ScreenWidget`, and
+define its metadata.
+The macro is the shortest option for default-constructible screens:
 
 ```rust
-// frontend/src/game/card/my_card.rs
-struct MyCard { id: usize }
-impl CardEncoding for MyCard { ... }
+use egui::Ui;
+use eframe::Frame;
 
-struct MyCardVisuals;
-impl CardConfig for MyCardVisuals {
-    fn img(&self, card: &impl CardEncoding) -> Image {
-        // Return appropriate image based on card state
+#[derive(Default)]
+pub struct MyScreen;
+
+impl ScreenWidget for MyScreen {
+    fn ui(&mut self, interface: &mut FrontendInterface, ui: &mut Ui, frame: &mut Frame) {
+        ui.label("Hello from MyScreen!");
+        if ui.button("Back").clicked() {
+            interface.change_screen::<crate::screens::MainMenu>();
+        }
     }
-    // ... define dimensions
+}
+
+crate::impl_screen_def!(
+    MyScreen,
+    "/myscreen",
+    "My Screen",
+    "🌟",
+    "A custom example screen",
+    true
+);
+```
+
+Furthermore, new screens should be exported in `frontend/src/screens.rs` and
+have to be registered:
+
+```rust
+impl ScreenRegistry {
+  pub fn new() -> Self {
+    let mut reg = Self { .. };
+    
+    // Register all screens by calling their ScreenDef implementations
+    reg.register::<MainMenu>();
+    reg.register::<MyScreen>();
+    // ...
+    reg
+  }
 }
 ```
 
-### How to add custom Field Layouts?
+Implement `ScreenWidget::on_message` when the screen wants to consume backend
+messages and `on_exit` when it owns resources that must be released during
+navigation.
 
-With `SimpleField` you can create horizontal or stacked layouts. For more complex layouts, for a game like **Solitaire** where you need vertical columns of cards, you need to create a new struct that implements `FieldWidget`.
+### How to Add a Card Type
+
+Implement `CardEncoding` for internal representation and `CardConfig` for their
+visual representation:
 
 ```rust
-// frontend/src/game/field/vertical_field.rs
-struct VerticalField { ... }
+struct MyCard {
+    id: usize,
+    masked: bool,
+}
+
+impl CardEncoding for MyCard {
+    // Implement `t`, `is_masked`, `mask`, and `open`.
+}
+
+struct MyCardVisuals;
+
+impl CardConfig for MyCardVisuals {
+    // Implement `img`, `T`, `w`, and `natural_size`.
+}
+```
+
+### How to Add a Field Layout
+
+`SimpleField` provides horizontal and stacked layouts.
+A new layout can be implemented as another `FieldWidget`:
+
+```rust
+struct VerticalField {
+    // cards and layout configuration
+}
+
 impl FieldWidget for VerticalField {
     fn draw(&self) -> impl egui::Widget {
-        // Implementation for drawing cards vertically
+        move |ui: &mut egui::Ui| {
+            // Draw the field and return its response.
+            ui.response()
+        }
     }
 }
 ```

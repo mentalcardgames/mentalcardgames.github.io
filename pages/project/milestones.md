@@ -4,12 +4,11 @@ outline: deep
 
 # Student Milestones
 
-This lists the active milestones and software engineering packages available for
-student projects.
+This lists the active milestones and software engineering packages available
+for student projects.
 Each milestone represents a core challenge within our architecture.
-Rather than being tied to rigid academic ECTS levels,
-tasks are dynamically scaled and adjusted based on a student's expected
-workload.
+Rather than being tied to rigid academic ECTS levels, tasks are dynamically
+scaled and adjusted based on a student's expected workload.
 
 ## Miscellaneous
 
@@ -111,62 +110,69 @@ new connections and closing existing ones.
 
 **The Problem:**
 
-Screens currently have direct, raw access to the `WebSocketConnection` in
-`AppInterface`, allowing them to manually control the connection lifecycle,
-register custom callbacks, or send raw serialized payloads.
-Furthermore, the application forces continuous rendering
-(`ctx.request_repaint()`) every frame even when idle, and the backend connection
-address must be manually typed or hardcoded rather than being dynamically
-resolved from the browser context.
+Connection lifecycle decisions are distributed across screens.
+Screens can initiate or close the shared connection through
+`FrontendInterface`, while the default backend address remains hardcoded
+instead of being derived from the browser location.
+Connection errors and close reasons are only logged and are not represented as
+application-visible state.
+
+`FrontendInterface` also exposes the general-purpose `send_msg` method.
+Although it accepts a typed `Frontend2BackendMsg`, screens remain coupled to
+the complete wire-protocol enum instead of using purpose-specific frontend
+operations.
 
 **Motivation:**
 
-A clean interface boundary should hide the communication details (WebSockets)
-behind a high-level, typed messaging API.
-Transitioning to event-driven/reactive repainting prevents high CPU/battery
-utilization in WASM/browser environments.
+A clean interface boundary should hide transport details and connection
+lifecycle policy behind high-level, typed application operations.
+This keeps screens independent of the underlying WebSocket implementation and
+provides a single place for reconnect behavior, connection feedback, and
+reactive UI updates.
 
 **Deliverables:**
 
-- Update initialization to extract the host/port from the browser's URL location
-(e.g. using `web_sys::window()`) and save it to the global client settings.
-- Remove the need for screens to manually connecting to the backend.
-- Remove direct access to `WebSocketConnection` from `AppInterface`.
-- Expose only high-level, typed messaging methods on `AppInterface`
-(e.g. `send_message(message)`, `send_action(action)`) so screens never touch the
-raw socket.
-- Disable the continuous/unconditional `ctx.request_repaint()` in `App::update`.
-- Update `WebSocketConnection`'s event callbacks (`onmessage`, `onerror`,
-`onclose`) to automatically invoke `ctx.request_repaint()` on the active context
-when new data is received.
-- Remove `ConnectionState` as its Message-Queue is not used.
-- Decide if `ConnectionStatus` can be incorporated into the websocket type.
+- Derive the default backend host, port, and WebSocket scheme from the browser
+location instead of defaulting to `127.0.0.1:3000`.
+- Move connection startup, reconnect, and shutdown policy into `FrontendApp` so
+screens request application operations rather than managing lifecycle timing.
+- Replace general-purpose protocol access with purpose-specific methods where a
+stable frontend operation exists; retain a narrow sender abstraction only where
+generic message forwarding is intentional.
+- Represent connection status, errors, and close reasons as application-visible
+state and request a repaint for error/close callbacks.
 
 ### Frontend State Decoupling
 
 **The Problem:**
 
-Currently, the `AppInterface` exposes the global `ClientState` monolith directly
-to all screens.
-Some screens store their page-specific rendering and setup states
-(e.g. temporary text edit buffers, ready toggles) in this global struct.
-This pollutes the global state, creates tight architectural coupling, and makes
-it difficult for multiple developers to work on separate screens concurrently.
+`FrontendInterface::state()` and `state_mut()` expose the complete
+`FrontendState`, whose fields are public.
+Any screen can therefore modify application-owned settings and the screen
+registry directly.
+The lifetime policy for screen instances and their local state during
+navigation is also not formally defined or tested.
 
 **Motivation:**
 
-Encapsulating the application state ensures pages are modular, self-contained,
-and easier to write and test in isolation.
-`ClientState` should only govern application-wide parameters (like settings or
-active routing).
+Narrow application capabilities make ownership explicit and keep screens
+modular.
+Screens should request navigation or configuration changes through
+purpose-specific operations without receiving unrestricted mutable access to
+global state.
+A defined screen-lifetime policy also makes local state behavior predictable
+when users navigate away and return.
 
 **Deliverables:**
 
-- Audit existing screens (e.g. Poker, Lobby, and Setup screens) and move
-screen-specific states (such as player ready indicators and local editing buffers) directly into their respective `ScreenWidget` structs.
-- Retain only application-wide settings (like player credentials and server configuration) in `ClientState`.
-- Make `ClientState` private/internal within `AppInterface`.
-- Expose only high-level, structured helper methods on `AppInterface` (e.g. for retrieving global configuration properties or queueing application-level navigation events).
+- Make `FrontendState` fields private and remove unrestricted `state_mut()`
+access from screens.
+- Add purpose-specific getters and commands for player identity, server
+configuration, theme/DPI settings, and any other legitimate global capability.
+- Keep registry mutation and applied UI settings entirely under `FrontendApp`
+ownership.
+- Document and test the lifetime policy for screen instances and their local
+state when navigating away and returning.
 
 ## UI Rendering
 
