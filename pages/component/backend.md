@@ -4,368 +4,250 @@ outline: deep
 
 # Backend
 
-**native_mcg** is the backend for the MCG (Mental Card Game) poker server.
-It is a Rust async server built with **Tokio** and **Axum**.
-It serves the Web UI (HTML, WASM, and media), exposes a **WebSocket** endpoint
-(`/ws`) and an **HTTP API** (`/api/message`) for the frontend, and optionally
-an **Iroh** QUIC transport for peer-to-peer or remote clients.
-The protocol and domain types (`Frontend2BackendMsg`, `Backend2FrontendMsg`,
-`PokerStatePublic`, etc.) live in the **mcg-shared** crate;
-both the backend and the frontend depend on it.
+**native_mcg** is the native backend of Mental Card Game (MCG).
+It is an asynchronous Rust application built with **Tokio** and **Axum**.
+It serves the browser frontend and media assets, drives the current poker
+implementation and bots, and connects the local node to frontends and other
+backend peers.
 
-## Architecture & API
+The backend currently exposes:
 
-The core interaction logic is built around managing the game state concurrently
-for multiple connected clients and providing different ways to connect and
-interact.
+- an HTTP API at `/api/message`,
+- a WebSocket endpoint at `/ws`,
+- an iroh-over-QUIC endpoint for frontend and backend-peer connections,
+- static routes for the browser application, generated WASM, and media.
 
-### Core Structs & Modules
+## Current Architecture
 
-- **`AppState`** @ [native_mcg/src/server/state.rs](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/state.rs):
-  - **Purpose**: Holds the shared application state information, determining
-  how the backend should behave.
-  - **Usage**: Contains the `Lobby` (which holds the game state and bot
-  configurations), a broadcast channel sender for pushing updates, and
-  server configuration.
-  It's safe to share across threads using `Arc<RwLock<Lobby>>` and injected
-  into Axum handlers as `State(state)`.
-
-- **`axum::routing::Router`**:
-  - **Purpose**: Defines where different kinds of incoming requests should be
-  forwarded to and how they are handled.
-  - **Usage**: Created in `build_router` in [server/run.rs](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/run.rs).
-  It maps endpoints like `/ws` to the WebSocket handler and `/api/message` to
-  the HTTP handler.
-
-- **`Subscription`** @ [native_mcg/src/server/state.rs](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/state.rs):
-  - **Purpose**: Acts as a synchronization gateway between multiple frontends.
-  - **Usage**: The backend can establish connections with multiple frontends,
-  so we want to have a way to broadcast messages to all frontends such that
-  every frontend sees the same thing.
-  Returned by `subscribe_connection` and holds a
-  `broadcast::Receiver<Backend2FrontendMsg>`.
-
-- **`Lobby`** @ [native_mcg/src/server/state.rs](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/state.rs):
-  - **Purpose**: Manages the current active game session and bot-related state.
-  - **Usage**: Encapsulates the `Game` instance, tracks which `PlayerId`s are
-  controlled by bots, and holds the `BotManager`.
-
-### Initialization & Lifecycle
-
-The server is started from the **native_mcg** binary.
-The program entry point is `main` in [native_mcg/src/main.rs](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/main.rs),
-which is annotated with `#[tokio::main]` to run on the async Tokio runtime.
-
-1. **CLI parsing**:
-Arguments are parsed via `ServerCli` (Clap).
-Supported options include `--config`, `--debug`, `--iroh-key`, and `--persist`.
-2. **Logging setup**:
-A tracing subscriber is initialized with an env filter based on debug mode.
-3. **Configuration**:
-`Config::load_or_create` loads configuration from a TOML file.
-4. **Shared state**:
-`AppState::new` is called with the loaded config to build the shared server
-state.
-5. **Port binding**:
-Finds an available port starting from 3000.
-6. **Server run**:
-`run_server(addr, state)` (in [native_mcg/src/server/run.rs](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/run.rs))
-brings the server up.
-It performs the following concurrently:
-   - **Build Router**:
-   Creates the Axum application router.
-   - **Spawn Iroh**:
-   Starts a background task for the Iroh peer-to-peer listener. 
-   - **Spawn Bot Driver**:
-   Starts a background task loop (`run_bot_driver`) to evaluate AI turns.
-   - **Serve HTTP**:
-   Binds the TCP listener and executes `axum::serve(listener, app)`, blocking
-   execution until shutdown.
-
-### Accepting Connections
-
-The backend supports three different types of connections to clients:
-HTTP, WebSocket, and Iroh.
-
-- **HTTP**: HTTP is the most straightforward connection type as there is no
-session management.
-The responding message is directly returned inline as the response to the POST
-request.
-Handled by `message_handler` in [native_mcg/src/server/http.rs](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/http.rs).
-- **WebSocket and Iroh**: Both WebSocket and Iroh are more complicated as they
-need to manage a long-lived connection/session allowing for full-duplex
-communication and state push updates.
-  - WebSocket connections are upgraded and managed by `manage_websocket` in
-  [native_mcg/src/server/ws.rs](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/ws.rs).
-  - Iroh connections are managed by `manage_iroh_connection` in
-  [native_mcg/src/server/iroh.rs](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/iroh.rs).
-
-> **Note**: Regardless of connection type, all handlers are injected with the
-> same `AppState` to share the same game context.
-
-### Receiving Messages
-
-All three connection types, after successfully parsing incoming data as a
-`Frontend2BackendMsg` JSON payload, forward that message to a single unified
-handler for processing:
-
-```rust
-// Defined in native_mcg/src/server/state.rs
-pub async fn dispatch_client_message(state: &AppState, msg: Frontend2BackendMsg) -> Backend2FrontendMsg { ... }
-```
-
-1. **Routing**: The transport layers receive byte/text data and deserialize it.
-2. **Processing**: The `Frontend2BackendMsg` is passed to
-`dispatch_client_message`, which validates game logic, mutates the state
-(if it's an Action, NextHand, etc.), and triggers broadcasts.
-3. **Responding**: The function returns a `Backend2FrontendMsg`
-(e.g., `Backend2FrontendMsg::UpdatePokerState` or `Backend2FrontendMsg::Error`),
-which the transporter then sends back to the client that initiated the request.
-
-### State Synchronization & Push Updates
-
-When the game state is modified (e.g., via `apply_action_to_game`), the server
-needs to inform connected clients.
-
-1. **Broadcast Call**: The handler calls `broadcast_state(state)`.
-2. **Channel Push**: This serializes the public projection of the game
-(`PokerStatePublic`) and sends `Backend2FrontendMsg::UpdatePokerState` over the
-`tokio::sync::broadcast` channel located in `AppState`.
-3. **Transport Delivery**: Long-lived transports (like the WebSocket event loop
-in `manage_websocket`) `select!` on this channel receiver and immediately push
-the new state down the socket to the client.
-HTTP clients do not receive push notifications.
-
-### Connections with other nodes
-
-There currently is no code supporting connections to other backend nodes or
-multiserver clustering.
-The Iroh transport functions functionally similarly to WebSocket, allowing
-remote "clients" to connect over a P2P protocol, but it does not synchronize
-distributed lobbies.
-
-### Serving the Browser
-
-Static files for the web frontend UI are served entirely by the Axum router
-built in `build_router` in [run.rs](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/run.rs).
-
-The lines:
-```rust
-pub fn build_router(state: AppState) -> Router {
-    Router::new()
-        .nest_service("/pkg", serve_dir)
-        .nest_service("/media", serve_media)
-        .route("/", get(serve_index))
-}
-```
-are the "work horse" that provides all static files for the UI.
-
-- **SPA fallback**: Any path that does not start with an API endpoint (`/api`,
-`/ws`, `/health`) or asset directory (`/pkg`, `/media`) serves `index.html`.
-This allows the WebAssembly frontend to handle its own client-side routing
-(e.g., direct navigation to `/myscreen`).
-- **Working Directory**: The server must be run with the working directory at
-the repository root so that `index.html`, `pkg/`, and `media/` resolve
-correctly.
-
-## Startup Sequence
-
-1. **CLI Argument Parsing**:
-The server parses command-line arguments using `clap` to determine
-configuration paths, debug modes, and potential overrides (e.g., Iroh keys).
-2. **Logging Initialization**:
-A `tracing_subscriber` is set up.
-It configures the logging format and filters based on whether the application
-is running in debug mode.
-3. **Configuration Loading**:
-The server attempts to load a configuration file (`mcg-server.toml` by default).
-If it doesn't exist, it creates one with default values.
-CLI overrides are then applied.
-4. **State Initialization**:
-An `AppState` object is created, encapsulating the configuration and shared
-resources needed by the server's request handlers.
-5. **Port Allocation**:
-The server searches for the first available TCP port, starting at `3000` and
-scanning upwards until it finds a free one.
-6. **Server Execution (`run_server`)**:
-   - **Router Construction**:
-   An Axum `Router` is built, defining endpoints for the health check
-   (`/health`), WebSocket connections (`/ws`), HTTP API messages
-   (`/api/message`), and static file serving (`/pkg`, `/media`, `/`).
-   - **Iroh Listener (Background)**:
-   A Tokio task is spawned to run the Iroh listener concurrently for
-   peer-to-peer connections.
-   - **Bot Driver (Background)**:
-   Another Tokio task is spawned to continuously drive automated bot players.
-   - **Axum Serving**:
-   A `TcpListener` is bound to the allocated address, and `axum::serve` is
-   called to start processing incoming requests.
-
-The following sequence diagram illustrates the flow of the backend
-initialization:
+The networking layer separates byte-oriented transports from application state.
+A connection actor understands one transport and one protocol role, but it
+cannot access the lobby, game, or bot state.
+Actors report typed events to a central `NetworkSupervisor`;
+application code sends typed commands in the opposite direction.
 
 ```mermaid
-sequenceDiagram
-    participant Main as main.rs (tokio::main)
-    participant CLI as CLI Parser (clap)
-    participant Config as Configuration
-    participant State as AppState
-    participant RunServer as run_server (run.rs)
-    participant Router as Axum Router
-    participant Tasks as Background Tasks (Tokio)
-    participant Axum as Axum Server
+flowchart LR
+    Frontend["Browser frontend"]
+    Peer["Remote backend peer"]
+    HTTP["HTTP handler"]
+    WS["WebSocket actors"]
+    Iroh["iroh actors"]
+    Supervisor["NetworkSupervisor"]
+    PeerService["PeerConnectionService"]
+    Adapter["LegacyBackendAdapter"]
+    State["AppState / Lobby / Poker"]
 
-    Main->>CLI: Parse arguments
-    CLI-->>Main: CLI Options
-    Main->>Main: Initialize tracing/logging
-    Main->>Config: Load or create (mcg-server.toml)
-    Config-->>Main: Configuration Data
-    Main->>State: Initialize AppState(Config)
-    State-->>Main: Shared State
-    Main->>Main: Find available port (starts at 3000)
-    Main->>RunServer: Execute run_server(addr, AppState)
-    
-    RunServer->>Router: build_router(AppState)
-    Router-->>RunServer: Axum App (Routes configured)
-    
-    RunServer->>Tasks: Spawn Iroh listener task
-    RunServer->>Tasks: Spawn Bot driver task
-    
-    RunServer->>Axum: bind TcpListener
-    RunServer->>Axum: axum::serve(listener, app)
-    Note right of Axum: Server is now listening<br/>for HTTP/WS requests
+    Frontend <-->|"Frontend protocol"| WS
+    Peer <-->|"Peer protocol"| WS
+    Peer <-->|"Peer protocol"| Iroh
+    WS <-->|"ActorEvent / commands"| Supervisor
+    Iroh <-->|"ActorEvent / commands"| Supervisor
+    Supervisor <-->|"NetworkEvent / NetworkCommand"| Adapter
+    HTTP --> State
+    HTTP -->|"ConnectToServer"| PeerService
+    Adapter -->|"discovered peers"| PeerService
+    PeerService --> Supervisor
+    Adapter <-->|"messages and broadcasts"| State
 ```
 
-## Actor-Based Connection Architecture
-
-### Network & Connection Lifecycle
-
-1. **Out-of-Protocol Discovery**:
-Initial peer discovery is handled out-of-protocol.
-For example, a player might scan a QR code or copy a connection string from
-another player to bootstrap the first connection.
-2. **In-Protocol Advertisement**:
-Once an initial connection is established, further peers are discovered via
-in-protocol gossip or advertisements (e.g., Player A introduces Player B to
-Player C).
-3. **Frontend Independence**:
-The backend does not depend on a connected frontend to maintain these P2P
-connections or process background state.
-Frontends can connect or disconnect at will without interrupting the node's P2P
-responsibilities.
-
-### File Structure
-
-The project has been restructured to cleanly separate the communication layer
-from the core backend logic, and to extract the game engine into its own
-independent crate.
-The following diagram illustrates this organization using a tree view representation.
-
-::: danger
-This section is not accurate as the restructure is not finished.
+::: info Current implementation and goal state
+The application layer is still transitional:
+`LegacyBackendAdapter` connects the new networking layer to the existing
+lock-based `AppState` and poker logic.
 :::
 
+### Network Types
 
-```text
-Workspace
-├─ native_mcg/src/
-│  ├─ main.rs
-│  ├─ lib.rs
-│  ├─ controller.rs
-│  └─ communication
-│     ├─ mod.rs
-│     ├─ supervisor.rs
-│     ├─ ws.rs
-│     └─ p2p.rs
-└─ engine/src/
-   ├─ actor.rs
-   └─ lib.rs
-```
+The transport-neutral types are defined in
+[`native_mcg/src/network/types.rs`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/network/types.rs):
 
-- **`native_mcg/src/controller.rs`**:
-The heart of the native backend.
-This module defines the `Controller` struct, CLI argument parsing,
-configuration loading, and core business logic handling.
-- **`native_mcg/src/communication/`**:
-Contains the implementations for the actor model.
-This includes the `NetworkSupervisor` (which abstracts the network layer) and
-the specific transport actors (`ws.rs` for WebSockets, `p2p.rs` for Iroh
-peer-to-peer).
-- **`engine/`**:
-The Game Engine has been moved out of the backend into its own dedicated crate.
-It operates as its own actor (`actor.rs`), capable of receiving and
-transmitting messages independently.
+- **`ConnectionId`** identifies one live, process-local transport connection.
+  It is not sent over the wire and is not a persistent identity.
+- **`PeerId`** identifies a remote backend independently of a particular
+  connection. For iroh this is the authenticated remote endpoint ID.
+- **`ProtocolRole`** distinguishes frontend traffic from peer traffic.
+- **`TransportKind`** records whether a connection uses WebSocket or iroh.
+- **`PeerConnectionDirection`** records whether the local node accepted or
+  initiated a peer connection.
+- **`NetworkEvent`** reports connection readiness, typed inbound messages, and
+  connection closure to application code.
+- **`NetworkCommand`** sends typed frontend or peer messages and requests
+  connection closure.
+- **`ConnectionCloseReason`** preserves whether a connection ended remotely,
+  because of a transport or protocol error, or through a local request.
 
-### Class / Struct Diagram
+### Network Supervisor and Handle
 
-In this architecture, the **Network Supervisor** serves as an abstraction layer
-for the **Controller**.
-When a network message is received by a lightweight connection handler (either
-via a WebSocket from a local frontend or over Iroh from a remote peer), the
-handler forwards it to the Supervisor's MPSC channel.
-The Supervisor then funnels it to the `Controller` message loop, which
-processes the message, updates the local state, or interacts with the Game
-Engine as needed.
+[`NetworkSupervisor`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/network/supervisor.rs)
+owns the connection registry, connection actor tasks, bounded outbound queues,
+and in-progress outgoing iroh connection attempts. It assigns `ConnectionId`s
+and is the authoritative source of transport, protocol-role, peer-identity,
+and direction metadata.
 
-```mermaid
-classDiagram
-    class Controller {
-        +CliArgs cli_args
-        +Config config
-        +Receiver~ControllerMsg~ context_rx
-        +handle_messages() Result
-        +run() Result
-        +from_config(Config) Controller
-    }
-    
-    class Config {
-        +load(CliArgs) Config
-    }
-    
-    class CliArgs {
-    }
-    
-    class NetworkSupervisor {
-        +Sender~ControllerMsg~ controller_tx
-        +Receiver~WsMsg~ ws_rx
-        +Receiver~P2PMsg~ p2p_rx
-        +Vec~Sender~WsMsg~~ local_frontends
-        +Vec~Sender~P2PMsg~~ remote_peers
-        +receive_network_message()
-    }
-    
-    class GameEngineActor {
-        +Box~dyn CryptoTraits~ crypto
-        +evaluate_action()
-        +verify_zkp()
-    }
+Application and transport code use a cloneable `NetworkHandle` rather than
+accessing the supervisor directly. The handle can:
 
-    Controller *-- Config : owns
-    Controller *-- CliArgs : owns
-    
-    %% The Supervisor forwards network events to the Controller
-    NetworkSupervisor ..> Controller : forwards messages to
-    
-    %% The Controller interacts with the Engine to evaluate game rules
-    Controller --> GameEngineActor : queries / sends actions
-```
+- register upgraded WebSockets and accepted iroh streams;
+- configure the iroh endpoint used for outgoing connections;
+- establish an outgoing iroh peer connection;
+- deliver a `NetworkCommand`; and
+- request orderly shutdown.
 
-#### Key Relationships
+Commands are validated against connection metadata. Sending a frontend message
+to a peer connection, for example, returns a protocol-mismatch error. Bounded
+channels expose backpressure explicitly instead of allowing unbounded message
+growth. Outgoing iroh setup also has a timeout and reports ticket, transport,
+and setup failures as structured `NetworkError` values.
 
-::: info Architecture Integration
-1. **Controller Initialization**:
-`main.rs` parses the `CliArgs` and loads the `Config` which in turn is used to
-initialize the `Controller`.
-2. **Network Abstraction**:
-The `NetworkSupervisor` shields the `Controller` from the intricacies of
-connection management.
-It holds all connections into which the controller can write.
-Dedicated connection tasks forward incoming messages into the Supervisor's
-channels (`ws_rx`, `p2p_rx`), and the Supervisor funnels them to the
-`Controller` via `controller_tx`.
-3. **Engine Independence**:
-The `GameEngineActor` resides in a separate crate and evaluates the actions
-based on the cryptographic traits.
-The `Controller` interacts with it via message passing.
-:::
+### Connection Actors
 
+Transport actors live in:
+
+- [`native_mcg/src/network/websocket.rs`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/network/websocket.rs); and
+- [`native_mcg/src/network/iroh.rs`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/network/iroh.rs).
+
+Each actor owns one reader/writer pair and a private outbound command channel.
+It deserializes inbound frames into the message enum appropriate for its
+protocol role and serializes typed outbound commands. It reports `Ready`,
+message, identity, and `Closed` events to the supervisor. It deliberately has
+no reference to `AppState`.
+
+## Transport Protocols
+
+### HTTP
+
+`POST /api/message` accepts a JSON `Frontend2BackendMsg` and returns a
+`Backend2FrontendMsg`. The handler is implemented in
+[`native_mcg/src/server/http.rs`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/http.rs).
+
+Most messages are passed to the existing `dispatch_client_message` application
+handler. `ConnectToServer` is special: it delegates to `PeerConnectionService`
+so HTTP callers use the same validation and duplicate-suppression path as
+connections initiated through peer discovery. HTTP is request/response only
+and does not subscribe to pushed frontend updates.
+
+### WebSocket
+
+[`native_mcg/src/server/ws.rs`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/ws.rs)
+upgrades `/ws` requests, selects their protocol role, and registers the socket
+with the supervisor. The supported WebSocket subprotocols are:
+
+- `mcg.frontend` for `Frontend2BackendMsg` / `Backend2FrontendMsg`; and
+- `mcg.peer` for `Peer2PeerMsg` between backends.
+
+A request without a subprotocol is accepted as a legacy frontend connection.
+An unsupported explicit subprotocol is rejected.
+
+An incoming peer WebSocket must first send `WebSocketPeerHandshake`, which
+claims a syntactically valid iroh endpoint ID. The socket remains pending until
+that handshake succeeds or its timeout expires. Unlike an iroh connection,
+this claimed WebSocket identity is **not authenticated**; application code must
+not treat it as cryptographic proof of the remote peer's identity.
+
+### iroh
+
+[`native_mcg/src/server/iroh.rs`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/iroh.rs)
+owns the listener endpoint, persists or restores its secret key, publishes the
+local endpoint ticket, accepts QUIC connections, and registers accepted streams
+with the supervisor.
+
+Two ALPN values keep frontend and peer traffic separate:
+
+- `mcg/iroh/frontend` carries the frontend protocol; and
+- `mcg/iroh/peer` carries `Peer2PeerMsg` values.
+
+Both use newline-delimited JSON over a bidirectional QUIC stream. For peer
+connections, iroh supplies an authenticated remote endpoint ID, which becomes
+the transport-independent `PeerId`. The configured endpoint is also installed
+in the supervisor so outgoing peer connections use the same connection actor
+and lifecycle as accepted connections.
+
+## Peer Connection Coordination
+
+[`PeerConnectionService`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/peer_connections.rs)
+is the single application-level entry point for outgoing iroh peer
+connections. It:
+
+1. parses the endpoint ticket and derives the expected `PeerId`;
+2. rejects attempts to connect to the local endpoint;
+3. reserves the peer while setup is pending, suppressing concurrent duplicate
+   attempts;
+4. asks the supervisor to establish and register the transport connection; and
+5. sends the initial `Peer2PeerMsg::Connect` introduction.
+
+The service also tracks established incoming and outgoing peer connections. If
+both peers connect to each other at the same time, both nodes choose the same
+winner deterministically from their ordered peer IDs and connection direction.
+The redundant connection is closed, leaving one stable connection per peer.
+
+## Application Adapter and State
+
+[`LegacyBackendAdapter`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/network_adapter.rs)
+is the temporary boundary between the actor-based network layer and the current
+application implementation. It consumes `NetworkEvent`s and:
+
+- forwards frontend messages to `dispatch_client_message`;
+- subscribes frontend connections that send `Frontend2BackendMsg::Subscribe`;
+- routes `Backend2FrontendMsg` broadcasts to subscribed connections;
+- applies `Peer2PeerMsg` lobby, discovery, naming, readiness, and disconnect
+  behavior;
+- forwards peer broadcasts to active peer connections; and
+- removes connection and peer metadata after closure.
+
+The current [`AppState`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/state.rs)
+still uses shared `Arc<RwLock<...>>` state.
+It owns the poker lobby, bot configuration, frontend and peer broadcast
+senders, persisted server configuration, local iroh ticket, and known-peer
+information.
+
+When poker state changes, `broadcast_state` produces a `PokerStatePublic` and
+sends `Backend2FrontendMsg::UpdatePokerState`. The adapter delivers the update
+to every subscribed frontend actor. Peer lobby messages use the separate peer
+broadcast path.
+
+This adapter preserves the existing poker behavior while the application layer
+moves toward the goal-state Controller and Game Engine ownership model.
+
+## Server Startup and Shutdown
+
+The executable entry point in
+[`native_mcg/src/main.rs`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/main.rs)
+loads configuration, initializes tracing and `AppState`, chooses the first
+available port starting at 3000, and calls `run_server`.
+
+[`run_server`](https://github.com/mentalcardgames/mcg/blob/main/native_mcg/src/server/run.rs)
+then:
+
+1. creates the `NetworkSupervisor`, `NetworkHandle`, `PeerConnectionService`,
+   and `LegacyBackendAdapter`;
+2. spawns the supervisor, adapter, and bot-driver tasks;
+3. builds the Axum router with the application and networking handles;
+4. starts the iroh listener and configures its endpoint in the supervisor; and
+5. serves HTTP and WebSocket traffic with Axum.
+
+On server termination, the iroh listener is stopped, the supervisor is asked
+to shut down its connection actors, and the owned supervisor and adapter tasks
+are joined. Owned task handles also abort their tasks if router state is
+dropped unexpectedly.
+
+## Browser Assets and Routes
+
+The Axum router serves:
+
+- `/health` for a JSON health response;
+- `/api/message` for HTTP protocol messages;
+- `/ws` for frontend and peer WebSockets;
+- `/pkg` for generated WASM artifacts;
+- `/media` for media assets; and
+- `/` plus non-API fallback paths for the single-page application.
+
+The backend must be run with the repository root as its working directory so
+that `index.html`, `pkg/`, and `media/` resolve correctly.
+
+## Verification
+
+The networking layer includes unit tests for supervisor routing, protocol-role
+validation, backpressure, timeouts, closure, peer identity, and duplicate-peer
+resolution. Integration tests cover real loopback iroh frontend and peer
+connections, while WebSocket tests cover subprotocol selection, peer identity
+handshake, typed message exchange, and connection closure.
