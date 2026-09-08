@@ -189,17 +189,24 @@ about a single game's structure.
 Directly implementing an interface capable of rendering any arbitrary card game
 is extremely difficult, as they vary wildly in rules, spatial layouts,
 hidden information, and card interactions.
-Additionally, our current frontend is hardcoded specifically for the static
-Poker game, making it impossible to render other games.
+Additionally, our current graphical frontend is hardcoded specifically for the
+static Poker game, making it impossible to render other games.
+Furthermore, the existing command-line interface (`mcg-cli`) historically
+relied on HTTP request-response endpoints, which have been removed from the
+backend, and lacked persistent streaming required for reactive terminal
+experiences.
 
 **Motivation:**
 
 A Text-based User Interface (TUI) bypasses layout and visual styling
 complexities by rendering structured text or ASCII grids.
-Following our **split-node thin-client** model, the TUI operates as a standalone
-View client that connects to the native backend's Controller via WebSockets,
-receiving state projections and sending user actions as standard message
-packets.
+Following our **split-node thin-client** model, the TUI operates as a
+standalone View client that connects to the native backend's Controller via
+WebSocket (`/ws`), receiving pushed state projections and sending user actions
+as standard message packets in real time.
+Migrating the CLI and TUI tooling to WebSocket provides a unified, persistent
+duplex connection matching the web frontend, eliminating polling and enabling
+instant reactivity for game events.
 This serves as a first stepping stone to test and verify the CGDL engine's
 capabilities before building a full GUI.
 
@@ -207,8 +214,12 @@ capabilities before building a full GUI.
 
 - Implement a terminal-based frontend View binary either as part of the
 `mcg-cli` binary or as a standalone crate.
+- Migrate `mcg-cli`'s default transport from legacy HTTP to WebSocket
+(`ws://localhost:3000/ws`), establishing persistent duplex communication with
+the `/ws` endpoint and adopting the `mcg.frontend` subprotocol.
 - Connect to the native backend controller using the WebSocket messaging
-protocol (`Frontend2BackendMsg` / `Backend2FrontendMsg`).
+protocol (`Frontend2BackendMsg` / `Backend2FrontendMsg`), listening for pushed
+state updates reactively instead of polling.
 - Determine all components from CGDL that need representation.
 - Provide implementations of
 [`std::fmt::Display`](https://doc.rust-lang.org/std/fmt/trait.Display.html)
@@ -366,7 +377,7 @@ To support serverless card games, our project relies on distributed trust.
 Instead of relying on a trusted central authority or server to deal cards and
 maintain state secrets, we use cryptographic primitives and
 Zero-Knowledge Proofs (ZKPs).
-This ensures that players can hide their private hands, perform verifiable 
+This ensures that players can hide their private hands, perform verifiable
 operations (such as shuffling or drawing), and prove their compliance with game
 rules without revealing any sensitive information.
 
@@ -559,6 +570,7 @@ TODO: not finalized
 **The Problem:**
 
 How to ensure that when one node broadcasts a state change, the entire mesh network either collectively accepts or vetoes the action?
+
 - **State Propagation:** How to reliably broadcast state transitions across all mesh nodes.
 - **Agreement/Veto:** How to coordinate collective acceptance or vetoing of proposed actions.
 - **Disconnection:** How to recover and sync consensus state when a node temporarily disconnects.
