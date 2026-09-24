@@ -25,95 +25,13 @@ rule reuse.
 To support a generic framework, the game engine must be isolated from the
 application's infrastructure, allowing it to evaluate rules independent.
 
-### Game Engine Crate Extraction
-
-**The Problem:**
-
-The current state machine logic for static Poker is tightly coupled with
-frontend rendering and backend connection supervisors, causing it to be active
-at all times.
-
-**Motivation:**
-
-We would like to have the poker implementation decoupled and controllable.
-This way it can be run only when needed and it allows us to compare a dynamic
-implementation of poker in CGDL.
-
-**Deliverables:**
-
-- Extract all Poker-specific states, rules, and game FSM code into a dedicated
-workspace crate (e.g., `crates/static_poker` or `crates/static/poker`).
-- Define a clean, uniform interface/traits that the main application can call to
-step through states.
-- Ensure the existing Poker game remains fully playable using the new decoupled
-boundaries.
-
-### Synchronous Controller Environment
-
-**The Problem:**
-
-Currently, the codebase lacks a dedicated controller, making it difficult to
-grasp the backend architecture as there is no single point where all
-coordination and state management are located.
-Furthermore, this concurrency forces developers to write complex async Rust for
-logically synchronous operations.
-
-**Motivation:**
-
-Introducing a dedicated synchronous controller running sequentially in a
-single-threaded execution core eliminates concurrency issues such as deadlocks
-and race conditions.
-Additionally, a synchronous setting is much more familiar and intuitive to
-develop in, sparing students from the complexities of async task management and
-compiler lifetime friction.
-
-**Deliverables:**
-
-- Introduce a dedicated, synchronous **Controller** struct running in a
-sequential, synchronous execution setting.
-- Spawn a dedicated OS thread to execute the Controller's sequential loop.
-- Establish an MPSC queue to read incoming events from the async network shell
-to the Controller's thread.
-- Design the Controller to manage the core application state, holding state
-directly or delegating ownership to appropriate underlying models
-(such as `Lobby`, `Game`, or `Engine`).
-
-### Actor-Inspired Backend Messaging Architecture
-
-**The Problem:**
-
-The native backend has to concurrently manage multiple connection channels
-without blocking other calculations.
-Currently, these asynchronous connection tasks share state via locks,
-potentially causing deadlocks, and handling more than only connection related
-jobs.
-
-**Motivation:**
-
-To align connection handling with the asynchronous network shell, tasks should
-act as lightweight communication actors that feed the synchronous Controller
-without direct access to the state or locking constraints.
-
-**Deliverables:**
-
-- Restructure connection listeners as lightweight async actor tasks.
-- Ensure all connection actors parse raw incoming buffers into typed messages
-(`Frontend2BackendMsg`, `Peer2PeerMsg`) and route them to the central Controller
-over a MPSC channel.
-- Implement a direct messaging mechanism enabling the Controller to send
-outgoing packets to specific open connections independently through the network
-layer.
-- Allow the Controller to dynamically manage connection lifecycles by initiating
-new connections and closing existing ones.
-
 ### Frontend Encapsulated & Event-Driven Networking
 
 **The Problem:**
 
 Connection lifecycle decisions are distributed across screens.
 Screens can initiate or close the shared connection through
-`FrontendInterface`, while the default backend address remains hardcoded
-instead of being derived from the browser location.
+`FrontendInterface`.
 Connection errors and close reasons are only logged and are not represented as
 application-visible state.
 
@@ -132,8 +50,6 @@ reactive UI updates.
 
 **Deliverables:**
 
-- Derive the default backend host, port, and WebSocket scheme from the browser
-location instead of defaulting to `127.0.0.1:3000`.
 - Move connection startup, reconnect, and shutdown policy into `FrontendApp` so
 screens request application operations rather than managing lifecycle timing.
 - Replace general-purpose protocol access with purpose-specific methods where a
@@ -168,9 +84,8 @@ when users navigate away and return.
 - Make `FrontendState` fields private and remove unrestricted `state_mut()`
 access from screens.
 - Add purpose-specific getters and commands for player identity, server
-configuration, theme/DPI settings, and any other legitimate global capability.
-- Keep registry mutation and applied UI settings entirely under `FrontendApp`
-ownership.
+configuration, and any other legitimate global capability.
+- Keep registry mutation entirely under `FrontendApp` ownership.
 - Document and test the lifetime policy for screen instances and their local
 state when navigating away and returning.
 
