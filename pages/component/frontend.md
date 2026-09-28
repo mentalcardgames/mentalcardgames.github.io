@@ -40,6 +40,35 @@ frontend/src/
 └─ lib.rs                  # WASM entry point
 ```
 
+## Cargo Workspace Isolation & Compilation
+
+Unlike native backend crates, `crates/frontend` is **intentionally excluded**
+from the root Cargo workspace (`exclude = ["crates/frontend"]` in `Cargo.toml`).
+
+### Why `crates/frontend` is Excluded
+
+- **Target Incompatibility:**
+  The frontend crate targets `wasm32-unknown-unknown` and relies on browser APIs
+  via `web-sys`, `wasm-bindgen`, and `js-sys`.
+  It cannot compile for native host operating system targets.
+- **Native Dependency Conflicts:**
+  The backend crates rely on native OS capabilities that do not compile under
+  `wasm32-unknown-unknown`.
+- **Cargo Workspace Constraint:**
+  Cargo expects all members in a workspace to share a compatible default
+  compilation target.
+  Including `crates/frontend` in the root workspace would break unified commands
+  such as `cargo check --workspace` or `cargo test --workspace` on host machines.
+
+Frontend artifacts are built independently using `wasm-pack` via
+`just build [PROFILE]`.
+Frontend linting and formatting can be verified separately:
+
+```shell
+cargo fmt --manifest-path crates/frontend/Cargo.toml
+cargo clippy --manifest-path crates/frontend/Cargo.toml --target wasm32-unknown-unknown
+```
+
 ## Architecture & API
 
 ### Application Types
@@ -72,10 +101,10 @@ frontend/src/
 - **`ScreenWidget`** @
   [frontend/src/widgets/screen.rs](https://github.com/mentalcardgames/mcg/blob/main/frontend/src/widgets/screen.rs)
   defines the runtime behavior of a screen:
-  - `ui` renders the screen and handles user input.
-  - `on_message` receives typed `Backend2FrontendMsg` values dispatched by
-    `FrontendApp`.
-  - `on_exit` releases screen-owned resources before navigation.
+    - `ui` renders the screen and handles user input.
+    - `on_message` receives typed `Backend2FrontendMsg` values dispatched by
+      `FrontendApp`.
+    - `on_exit` releases screen-owned resources before navigation.
 - **`ScreenDef`** defines compile-time metadata and a factory for a screen.
 - **`ScreenId`** wraps Rust's `TypeId`. Navigation therefore uses screen types
   rather than path strings.
@@ -157,7 +186,7 @@ Screens request navigation by target type:
 
 ```rust
 impl FrontendInterface {
-  pub fn change_screen<T: ScreenDef + 'static>(&mut self) { ... }
+    pub fn change_screen<T: ScreenDef + 'static>(&mut self) { ... }
 }
 ```
 
@@ -214,7 +243,7 @@ Screens send typed protocol values through the interface:
 
 ```rust
 impl FrontendInterface {
-  pub fn send_msg(&mut self, msg: Frontend2BackendMsg) { ... }
+    pub fn send_msg(&mut self, msg: Frontend2BackendMsg) { ... }
 }
 ```
 
@@ -244,17 +273,17 @@ separate from game-state mutation.
 
 ```rust
 impl ScreenWidget for Game<DirectoryCardType> {
-  fn ui(&mut self, app_interface: &mut FrontendInterface, ui: &mut egui::Ui, frame: &mut Frame) {
-    // ...
-    
-    if let (Some(source), Some(destination)) = (self.drag, self.drop) {
-      self.game_state.move_card(source, destination);
-      self.drag = None;
-      self.drop = None;
-    }
-    // ...
+    fn ui(&mut self, app_interface: &mut FrontendInterface, ui: &mut egui::Ui, frame: &mut Frame) {
+        // ...
 
-  }
+        if let (Some(source), Some(destination)) = (self.drag, self.drop) {
+            self.game_state.move_card(source, destination);
+            self.drag = None;
+            self.drop = None;
+        }
+        // ...
+
+    }
 }
 ```
 
@@ -285,21 +314,21 @@ struct MyScreen {
 }
 
 impl ScreenWidget for MyScreen {
-  fn ui(&mut self, app_interface: &mut FrontendInterface, ui: &mut egui::Ui, frame: &mut Frame) {
-    // Text mode closes after the first successful decode.
-    self.scanner.button_and_popup(
-      ui,
-      ui.ctx(),
-      QrDecodeTarget::String(&mut self.text),
-    );
+    fn ui(&mut self, app_interface: &mut FrontendInterface, ui: &mut egui::Ui, frame: &mut Frame) {
+        // Text mode closes after the first successful decode.
+        self.scanner.button_and_popup(
+            ui,
+            ui.ctx(),
+            QrDecodeTarget::String(&mut self.text),
+        );
 
-    // Binary mode remains open so a stream of QR frames can be collected.
-    self.scanner.button_and_popup(
-      ui,
-      ui.ctx(),
-      QrDecodeTarget::Binary(&mut self.bytes),
-    );
-  }
+        // Binary mode remains open so a stream of QR frames can be collected.
+        self.scanner.button_and_popup(
+            ui,
+            ui.ctx(),
+            QrDecodeTarget::Binary(&mut self.bytes),
+        );
+    }
 }
 ```
 
@@ -342,15 +371,15 @@ have to be registered:
 
 ```rust
 impl ScreenRegistry {
-  pub fn new() -> Self {
-    let mut reg = Self { .. };
-    
-    // Register all screens by calling their ScreenDef implementations
-    reg.register::<MainMenu>();
-    reg.register::<MyScreen>();
-    // ...
-    reg
-  }
+    pub fn new() -> Self {
+        let mut reg = Self { .. };
+
+        // Register all screens by calling their ScreenDef implementations
+        reg.register::<MainMenu>();
+        reg.register::<MyScreen>();
+        // ...
+        reg
+    }
 }
 ```
 

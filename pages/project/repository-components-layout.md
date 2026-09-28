@@ -4,9 +4,10 @@ outline: false
 
 # Repository Components & Layout
 
-To keep the workspace structured and decoupled,
-logical components are organized into subfolders within the Git repository.
-The map below outlines the file structure and how components map to internal Rust crates:
+To keep the workspace structured and decoupled, logical components are
+organized into subfolders within the Git repository.
+The map below outlines the file structure and how components map to internal
+Rust crates:
 
 ```text
 mcg/ (Repository Root)
@@ -34,17 +35,41 @@ mcg/ (Repository Root)
 └─ LICENSE
 ```
 
-## Planned Directory Refactoring
+## Cargo Workspace Configuration
 
-* **Crates Folder Migration:**
-We have scheduled a structural refactoring to migrate our core root-level crates
-(`frontend/`, `native_mcg/`, `shared/`) into the centralized `/crates/` directory.
-This isolates compiler outputs, simplifies workspace setup, and removes root-level pollution.
-* **Documentation Relocation:**
-The `/docs` directory inside the core gameplay repository is slated for replacement.
-All comprehensive documentation is now managed in this dedicated Git repository.
-* **DSL Components Consolidation:**
-To better organize our domain-specific language tooling,
-we plan to group the related crates (`cgdsl/`, `code_gen/`, `front_end/`, and `lsp_server/`)
-under a single nested subdirectory: `/crates/cardgame_dsl/`.
-This separates compiler, parser, LSP, and IDE extension logic from runtime and communication components.
+The root `Cargo.toml` defines the unified workspace for native crates
+(`crates/native_mcg`, `crates/shared`, `crates/qr_comm`,
+`crates/cardgame_dsl/*`, `crates/engine`, `crates/poker`).
+
+### Frontend Exclusion (`wasm32` Target)
+
+`crates/frontend` is **explicitly excluded** from `[workspace.members]`:
+
+- **Compilation Target:**
+  The frontend is built exclusively for `wasm32-unknown-unknown` with browser
+  bindings (`web-sys`, `wasm-bindgen`).
+- **Native Isolation:**
+  The native backend and engine crates require host operating system capabilities
+  (multi-threaded Tokio runtime, OS sockets, threads, file I/O) that do not
+  compile under `wasm32-unknown-unknown`.
+- **Cargo Constraint:**
+  Cargo workspaces require member crates to compile against a unified default
+  target.
+  Isolating `crates/frontend` prevents `cargo test --workspace` or
+  `cargo clippy --workspace` from breaking when run against the host target.
+  Frontend compilation is instead driven by `wasm-pack` (`just build`).
+
+## Directory Organization & Submodules
+
+- **Centralized Crates (`crates/`):**
+  All internal Rust crates are organized under `/crates/`, isolating compilation
+  outputs and keeping the repository root clean.
+- **Documentation Submodule (`docs/`):**
+  The `/docs` directory is maintained as a Git submodule pointing to the
+  documentation repository [`mentalcardgames.github.io`](https://github.com/mentalcardgames/mentalcardgames.github.io).
+  For instructions on installing documentation dependencies and running the
+  VitePress development server locally, see [`docs/README.md`](https://github.com/mentalcardgames/mentalcardgames.github.io/blob/main/README.md).
+- **Card Game DSL Subdirectory (`crates/cardgame_dsl/`):**
+  Tooling for the Card Game Description Language (`front_end/`, `code_gen/`,
+  `lsp_server/`, `cgdsl/`) is grouped under `/crates/cardgame_dsl/`, separating
+  language tooling from game and transport runtimes.

@@ -4,95 +4,384 @@ outline: deep
 
 # Developer Setup & Rules
 
-This guide outlines how to set up your local development environment, build the project, and contribute new features or documentation to our codebase. Please follow these instructions carefully to ensure compatibility across our multi-platform workspace.
+This guide outlines how to set up your local development environment, build the
+project, and contribute new features or documentation to our codebase.
+Please follow these instructions carefully to ensure compatibility across our
+multi-platform workspace.
 
 ## 1. Prerequisites & Toolchain Setup
 
-To develop and build both the frontend and backend, you will need the following tools installed on your local machine:
+To develop and build both the frontend and backend, you will need the following
+tools installed on your local machine:
 
 1. **Rust Toolchain:**
-   - Install Rust stable using [rustup](https://rustup.rs).
-   - TODO: write that our project uses WebAssembly and therefore needs the `wasm32-unknown-unknown` target
-2. **Just Runner:** We use `just` as a command runner for project actions.
-   - `cargo install just`
-3. **WebAssembly Pack (`wasm-pack`):** Needed to compile our Rust frontend into WebAssembly.
-   - `cargo install wasm-pack`
-4. **Optional dependencies for the Website:**
-   - Install [NodeJS](https://nodejs.org). Node, npm, and bun are only used for the website. If these are installed, you can view a live preview of the changes you make before publishing them.
 
-## 2. Compiling WebAssembly (WASM)
+   Install Rust stable using [rustup](https://rustup.rs) and add the
+   WebAssembly compilation target:
 
-Our frontend is a WebAssembly application built with Rust and `egui`/`eframe`. 
+     ```shell
+     rustup target add wasm32-unknown-unknown
+     ```
+
+   This target is mandatory to compile our browser frontend crate into
+   WebAssembly.
+2. **Just Runner:**
+
+   We use `just` as a command runner for project actions.
+
+   ```shell
+   cargo install just
+   ```
+
+3. **WebAssembly Pack (`wasm-pack`):**
+
+   Needed to compile our Rust frontend into WebAssembly and generate JavaScript
+   glue code.
+
+   ```shell
+   cargo install wasm-pack
+   ```
+
+4. **Optional** for this Documentation Website:
+
+   We use [Bun](https://bun.sh) as the JavaScript runtime to compile markdown
+   into HTML and preview the documentation website locally.
+
+   Installing Bun is only advised for contributing changes to this website.
+   More information about website specific dependencies, installation steps,
+   and remote repository URLs, see
+   [`docs/README.md`](https://github.com/mentalcardgames/mentalcardgames.github.io/blob/main/README.md).
+
+## 2. Compiling WebAssembly (WASM) & Frontend
+
+Our frontend is a WebAssembly application built with Rust and `egui`/`eframe`.
 
 ### The Build Pipeline
-1. **Compilation:** `wasm-pack` compiles our `frontend` crate, creating highly optimized WebAssembly files and JS bindings.
-2. **Artifact Directory:** The compiled outputs are saved under the workspace root folder `/pkg/`.
-3. **Asset Serving:** The native backend server (`native_mcg`) automatically serves the HTML wrapper and all files inside `/pkg/` to the browser.
+
+1. **Compilation:**
+   `wasm-pack` compiles our `crates/frontend` crate, producing WebAssembly
+   binaries and JS bindings.
+2. **Artifact Directory:**
+   The compiled outputs are saved under the workspace root folder `/pkg/`.
+3. **Asset Serving:**
+   The native backend server (`native_mcg`) automatically serves the HTML wrapper
+   (`index.html`) and all files inside `/pkg/` to the browser.
+
+### Why `crates/frontend` is Excluded from the Cargo Workspace
+
+In the repository root
+[`Cargo.toml`](https://github.com/mentalcardgames/mcg/blob/main/Cargo.toml),
+you will notice that the `crates/frontend` crate is explicitly excluded:
+
+```toml
+[workspace]
+members = [
+    "crates/native_mcg",
+    "crates/shared",
+    "crates/qr_comm",
+    "crates/cardgame_dsl/front_end",
+    "crates/cardgame_dsl/lsp_server",
+    "crates/cardgame_dsl/code_gen",
+    "crates/engine",
+    "crates/poker",
+]
+exclude = ["crates/frontend"]
+```
+
+This separation is necessary due to fundamental differences in compilation
+targets:
+
+- **Target Incompatibility:**
+  The frontend crate targets `wasm32-unknown-unknown` and relies on browser APIs
+  via `web-sys`, `wasm-bindgen`, and `js-sys`.
+  It cannot compile for native operating system targets.
+- **Native Dependency Conflicts:**
+  Conversely, the backend, engine, and networking crates rely on native OS
+  capabilities (multi-threaded `tokio` runtime, network sockets, OS threads,
+  filesystem I/O) that do not compile under `wasm32-unknown-unknown`.
+- **Cargo Workspace Constraint:**
+  By default, Cargo expects all members in a workspace to compile against the
+  same default build target.
+  If `crates/frontend` were an included workspace member, standard workspace
+  commands such as `cargo check --workspace` or `cargo test --workspace` on a
+  host system would fail when trying to build the browser client for the host OS.
+  Passing `--target wasm32-unknown-unknown` would conversely break on the native
+  backend crates.
+
+**Independent Verification:**
+Because `frontend` is managed separately, verify, format, and lint it using its
+dedicated manifest:
+
+```shell
+# Format frontend code
+cargo fmt --manifest-path crates/frontend/Cargo.toml
+
+# Run clippy on the frontend for the wasm32 target
+cargo clippy --manifest-path crates/frontend/Cargo.toml --target wasm32-unknown-unknown
+
+# Build frontend WebAssembly artifacts
+just build dev      # Development profile
+just build release  # Optimized release profile
+```
 
 ### Key Just Recipes
-We use `just` recipes to automate compile loops. Run these from your root workspace:
+
+We use `just` recipes to automate build and execution loops.
+Run these from your root workspace:
+
 - **Build Frontend (Release):**
+
   ```shell
   just build release
   ```
+
 - **Run Developer Server (Frontend + Native Backend):**
+
   ```shell
   just start dev
   ```
-  This command automatically builds the frontend in development mode and launches the native backend server (serving on port 3000+).
 
-## 3. Local Code Documentation (Cargo Docs)
+  This command builds the frontend in development mode and launches the native backend server (serving on port 3000+).
 
-We maintain extensive internal architecture documentation, API contracts, and crate-level comments inside our Rust codebase. 
+## 3. Running the Documentation Website Locally
 
-To build and browse this documentation locally open a terminal in the root `mcg` workspace directory and run the following command:
+The documentation website is powered by [VitePress](https://vitepress.dev/).
+The documentation files reside in the `docs/` directory as a Git submodule.
+A standalone guide and dependency overview is also maintained directly in
+[`docs/README.md`](https://github.com/mentalcardgames/mentalcardgames.github.io/blob/main/README.md).
+
+### Quick Start
+
+To view your documentation edits with instant hot-reloading:
+
+1. **Open a terminal in the `docs/` directory:**
 
    ```shell
-   cargo doc --workspace --no-deps --open
+   cd docs
    ```
 
-This will compile all module-level docstrings and open a browser window displaying the workspace's fully cross-linked rustdoc site.
+2. **Install dependencies:**
 
-Crate-level responsibilities and system boundaries are documented using module-level comments `//!` at the top of each crate's main entry file (e.g., `frontend/src/lib.rs`, `native_mcg/src/lib.rs`, `shared/src/lib.rs`).
+   ```shell
+   bun install
+   ```
 
-## 4. Coding & Contribution Rules
+3. **Start the local development server:**
 
-To maintain codebase health and ease peer code reviews, all contributions must respect the following rules:
+   ```shell
+   bun run docs:dev
+   ```
 
-* **Strict Code Formatting:** Run `cargo fmt --all` before staging changes. Unformatted code will trigger a failure in the CI pipeline.
-* **Compiler Warnings as Errors:** Your code must compile without clippy warnings. Run:
+   VitePress starts a local server (by default at `http://localhost:5173/`).
+   Any changes made to markdown files in `docs/pages/` are immediately
+   reflected in your browser with live reload.
+
+### Building & Previewing Static Pages
+
+To verify that the documentation builds cleanly without broken links or syntax
+errors:
+
+```shell
+# Build static HTML site
+bun run docs:build 
+
+# Preview production build locally
+bun run docs:preview
+```
+
+## 4. Working with Git Submodules
+
+The `docs/` directory is integrated as a Git submodule referencing the public
+documentation repository:
+`https://github.com/mentalcardgames/mentalcardgames.github.io.git`.
+
+Because submodules track specific commit hashes rather than working trees,
+follow these essential workflows:
+
+### A. Cloning with Submodules vs. Cloning Separately
+
+- **Cloning the main repository with submodules:**
+  When cloning `mcg` for the first time, include `--recurse-submodules` so that
+  Git immediately pulls the submodule contents:
+
+  ```shell
+  git clone --recurse-submodules https://github.com/mentalcardgames/mcg.git
+  ```
+
+  If you already cloned without this flag, initialize and fetch the submodule
+  with:
+
+  ```shell
+  git submodule update --init --recursive
+  ```
+
+- **Cloning the submodule separately:**
+  If you or a contributor only want to work on documentation, tutorials, or
+  guides without setting up the full Rust toolchain or backend, you can clone
+  the documentation repository completely independently:
+
+  ```shell
+  git clone https://github.com/mentalcardgames/mentalcardgames.github.io.git
+  cd mentalcardgames.github.io
+  bun install
+  bun run docs:dev
+  ```
+
+### B. The Correct Commit Workflow ("Inside-Out")
+
+In Git, a parent repository does not track the files of a submodule;
+it only tracks a single **commit SHA pointer**.
+
+To avoid broken references across the team, commits must always be made from
+the **inside out**:
+
+1. **Step 1: Commit and push INSIDE the submodule:**
+
+   ```shell
+   cd docs
+   # Ensure you are on a branch, not in a detached HEAD state
+   git checkout main
+   git add .
+   git commit -m "docs: improve local developer guides"
+   git push origin main
+   ```
+
+2. **Step 2: Commit the updated pointer in the PARENT repository:**
+
+   ```shell
+   cd ..
+   # Stage the submodule folder (which records the new commit pointer)
+   git add docs
+   git commit -m "chore: update docs submodule reference"
+   git push
+   ```
+
+> [!CAUTION] Never commit parent references before pushing the submodule!
+> If you commit and push the parent repository before the submodule's new
+> commit is pushed, other developers and CI pipelines checking out your branch
+> will fail with `fatal: reference is not a tree` because the referenced commit
+> does not exist on the remote repository.
+
+### C. Configuring Remote URLs for Submodules
+
+The submodule declaration is located in `.gitmodules`:
+
+```ini
+[submodule "docs"]
+	path = docs
+	url = https://github.com/mentalcardgames/mentalcardgames.github.io.git
+	branch = main
+```
+
+- **Switching between HTTPS and SSH:**
+  To configure SSH (`git@github.com:...`) instead of HTTPS:
+
+  ```shell
+  # Configure via parent repo:
+  git submodule set-url docs git@github.com:mentalcardgames/mentalcardgames.github.io.git
+  git submodule sync
+
+  # Or configure directly within the submodule:
+  cd docs
+  git remote set-url origin git@github.com:mentalcardgames/mentalcardgames.github.io.git
+  ```
+
+- **Verifying remote URLs:**
+
+  ```shell
+  cd docs
+  git remote -v
+  ```
+
+## 5. Local Code Documentation (Cargo Docs)
+
+We maintain extensive internal architecture documentation, API contracts, and
+crate-level comments inside our Rust codebase.
+
+To build and browse this documentation locally, run:
+
+```shell
+cargo doc --workspace --no-deps --open
+```
+
+This compiles module docstrings and opens a browser window displaying the fully
+cross-linked rustdoc site.
+Crate-level boundaries are documented using `//!` at the top of each crate's
+main entry file (e.g., `crates/native_mcg/src/lib.rs`,
+`crates/shared/src/lib.rs`, `crates/frontend/src/lib.rs`).
+
+## 6. Coding & Contribution Rules
+
+To maintain codebase health and ease peer code reviews, all Pull Requests
+into main must respect the following rules:
+
+- **Strict Code Formatting:**
+  Run `cargo fmt` before staging changes:
+
+   ```shell
+   cargo fmt --all
+
+   # For the frontend
+   cargo fmt --manifest-path crates/frontend/Cargo.toml
+   ```
+
+- **Compiler Warnings as Errors:**
+  Your code must compile without clippy warnings. Run:
+
   ```shell
   cargo clippy --workspace --all-targets -- -D warnings
+  cargo clippy --manifest-path crates/frontend/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
   ```
-* **Verify Tests:** Ensure all unit and integration tests succeed:
+
+- **Verify Tests:**
+  Ensure all unit and integration tests succeed:
+
   ```shell
   cargo test --workspace
   ```
-* **Branch-Based Workflow:** Direct commits to `main` are strictly forbidden. Changes can only be integrated into `main` via a pull request (PR) that must be reviewed and approved by a supervisor. PRs are only accepted once all quality requirements are fully met, including strict code formatting, zero compiler warnings, passing test suites, and completed documentation. For active development, students should create a dedicated branch for their project/thesis named with their abbreviation (e.g., `dev/jancc`). Under this personal branch, you are free to use sub-feature branches to organize your work (e.g., `dev/jancc/feature/my-addition`).
-* **Documentation Commitment:** When creating new components or changing interfaces, updates to relevant modules docs are required. This includes files of this Website.
 
-## 5. Windows Specific Setup & Gotchas
+- **Branch-Based Workflow:**
+  Direct commits to `main` are strictly forbidden.
+  Changes can only be integrated into `main` via a pull request (PR) which has to
+  be reviewed and approved by a supervisor.
+  Students should create a dedicated branch for their project named with their
+  abbreviation (e.g., `dev/jancc`) and feature branches under it (e.g.,
+  `dev/jancc/feature/my-addition`).
+- **Documentation Commitment:**
+  Updates to module docs and website pages are required when creating new
+  components or changing interfaces.
 
-Developing systems-level Rust applications on Windows can occasionally lead to toolchain path or security blocks. Follow these two workarounds if you encounter compiler errors:
+## 7. Windows Specific Setup & Gotchas
+
+Developing systems-level Rust applications on Windows can occasionally lead to
+toolchain path or security blocks.
 
 ### A. MSVC Toolchain Setup & PATH Adjustments
-1. **Visual Studio Build Tools:** You must install the MSVC C++ build tools. Download the Visual Studio Installer and select **"Desktop Development with C++"** during setup. 
-   > [!NOTE]
-   > Ensure you install the standalone *Visual Studio Build Tools* (or *Visual Studio Community*), which are distinct desktop applications and separate from the VS Code editor.
-2. **PATH Variable Adjustment:** Some crates (like `cc`) require compilers such as `cl.exe` to be directly present in your system's `PATH` variables.
-   - Locating `cl.exe`: This binary typically resides in:
-     `C:\Program Files\Microsoft Visual Studio\<Year>\Community\VC\Tools\MSVC\<Version>\bin\Hostx64\x64`
-   - Add this path to your user environment variables if you get compilation failures stating `cl.exe could not be found`.
+
+1. **Visual Studio Build Tools:**
+   You must install MSVC C++ build tools.
+   Download the Visual Studio Installer and select
+   **"Desktop Development with C++"** during setup.
+2. **PATH Variable Adjustment:**
+   Some crates (like `cc`) require compilers such as `cl.exe` in `PATH`:
+    - Locating `cl.exe`:
+      `C:\Program Files\Microsoft Visual Studio\<Year>\Community\VC\Tools\MSVC\<Version>\bin\Hostx64\x64`
+    - Add this path to your user environment variables if you get
+      `cl.exe could not be found`.
 
 ### B. Smart App Control Code Signing Workaround
-Windows Smart App Control may block `cargo.exe`, `rustup.exe`, or locally compiled binaries because they are untrusted and unsigned. To fix this without lowering your system security:
-1. We have provided a PowerShell script at the root of the `mcg` repository: `sign_rust_binaries.ps1`.
-2. This script creates a trusted local self-signed code-signing certificate, adds it securely to your local certificate stores, and signs the Rust toolchain binaries in your `.cargo/bin` folder.
-3. Open PowerShell as an Administrator and execute:
-   ```powershell
-   .\sign_rust_binaries.ps1
-   ```
-4. To sign a newly compiled game binary that gets blocked:
+
+Windows Smart App Control may block `cargo.exe`, `rustup.exe`, or locally
+compiled binaries.
+In order to circumvent this issue use the provided PowerShell script at
+repository root: `sign_rust_binaries.ps1`.
+
+Open PowerShell as Administrator and run `.\sign_rust_binaries.ps1`.
+This creates a trusted local self-signed certificate and signs the Rust
+binaries in your `.cargo/bin` folder.
+
+To sign a newly compiled game binary run:
+
    ```powershell
    .\sign_rust_binaries.ps1 .\target\debug\native_mcg.exe
    ```
