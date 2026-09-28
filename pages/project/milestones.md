@@ -12,18 +12,16 @@ scaled and adjusted based on a student's expected workload.
 
 ## Miscellaneous
 
-::: danger
-
-TODO: not finalized
-
-Anpassen an [Synchronous Controller Environment](#synchronous-controller-environment)
-
-:::
-
-Coupling game rules directly with system logic limits modularity and prevents
-rule reuse.
-To support a generic framework, the game engine must be isolated from the
-application's infrastructure, allowing it to evaluate rules independent.
+This section addresses foundational architecture improvements that streamline
+the internal structure and boundaries of the client application.
+To align the frontend client with the project's Model-View-Controller (MVC)
+paradigm and thin-client goals, client-side responsibilities must be strictly
+encapsulated.
+The milestones below focus on decoupling UI screens from raw networking
+lifecycle concerns and restricting direct, mutable access to global state.
+By transitioning to event-driven networking abstractions and structured state
+accessors, screens become modular, self-contained views that interact with the
+local backend controller through well-defined application operations.
 
 ### Frontend Encapsulated & Event-Driven Networking
 
@@ -51,12 +49,12 @@ reactive UI updates.
 **Deliverables:**
 
 - Move connection startup, reconnect, and shutdown policy into `FrontendApp` so
-screens request application operations rather than managing lifecycle timing.
+  screens request application operations rather than managing lifecycle timing.
 - Replace general-purpose protocol access with purpose-specific methods where a
-stable frontend operation exists; retain a narrow sender abstraction only where
-generic message forwarding is intentional.
+  stable frontend operation exists; retain a narrow sender abstraction only where
+  generic message forwarding is intentional.
 - Represent connection status, errors, and close reasons as application-visible
-state and request a repaint for error/close callbacks.
+  state and request a repaint for error/close callbacks.
 
 ### Frontend State Decoupling
 
@@ -82,12 +80,12 @@ when users navigate away and return.
 **Deliverables:**
 
 - Make `FrontendState` fields private and remove unrestricted `state_mut()`
-access from screens.
+  access from screens.
 - Add purpose-specific getters and commands for player identity, server
-configuration, and any other legitimate global capability.
+  configuration, and any other legitimate global capability.
 - Keep registry mutation entirely under `FrontendApp` ownership.
 - Document and test the lifetime policy for screen instances and their local
-state when navigating away and returning.
+  state when navigating away and returning.
 
 ## UI Rendering
 
@@ -128,23 +126,23 @@ capabilities before building a full GUI.
 **Deliverables:**
 
 - Implement a terminal-based frontend View binary either as part of the
-`mcg-cli` binary or as a standalone crate.
+  `mcg-cli` binary or as a standalone crate.
 - Migrate `mcg-cli`'s default transport from legacy HTTP to WebSocket
-(`ws://localhost:3000/ws`), establishing persistent duplex communication with
-the `/ws` endpoint and adopting the `mcg.frontend` subprotocol.
+  (`ws://localhost:3000/ws`), establishing persistent duplex communication with
+  the `/ws` endpoint and adopting the `mcg.frontend` subprotocol.
 - Connect to the native backend controller using the WebSocket messaging
-protocol (`Frontend2BackendMsg` / `Backend2FrontendMsg`), listening for pushed
-state updates reactively instead of polling.
+  protocol (`Frontend2BackendMsg` / `Backend2FrontendMsg`), listening for pushed
+  state updates reactively instead of polling.
 - Determine all components from CGDL that need representation.
 - Provide implementations of
-[`std::fmt::Display`](https://doc.rust-lang.org/std/fmt/trait.Display.html)
-or a custom trait for all representable components.
+  [`std::fmt::Display`](https://doc.rust-lang.org/std/fmt/trait.Display.html)
+  or a custom trait for all representable components.
 - Provide an interactive prompt allowing the user to select which parts of the
-received state projection to print or track in real time.
+  received state projection to print or track in real time.
 - Support shortcuts or commands to quickly display specific zones, variables,
-or parts of the game state.
+  or parts of the game state.
 - Implement a "watchlist" mechanism to pin chosen components, keeping them
-permanently visible and auto-updating them on the screen when the state changes.
+  permanently visible and auto-updating them on the screen when the state changes.
 
 ### Providing more widgets
 
@@ -169,15 +167,15 @@ easily translate CGDL files into interactive interfaces.
 **Deliverables:**
 
 - Expand the widget library in the `frontend` crate to support components from
-CGDL.
+  CGDL.
 - Make parameters configurable (e.g., spacing, overlap offset, rotation,
-card size, margins).
+  card size, margins).
 - Standardize interaction states (e.g., drag-and-drop source/destination tags,
-single/multi-selection modes, hover preview/zoom).
+  single/multi-selection modes, hover preview/zoom).
 - Decouple widgets from concrete game state types so they only rely on generic
-traits.
+  traits.
 - Provide a widget catalog or demonstration screen in the game client
-showcasing all layout widgets and their configurations.
+  showcasing all layout widgets and their configurations.
 
 ### Extending CGDL with Markup
 
@@ -206,11 +204,11 @@ placement of elements.
 **Deliverables:**
 
 - Design the syntax and semantics of the CGDL language extension for spatial
-markup definitions.
+  markup definitions.
 - Implement parser support for the new layout markup within the existing
-CGDL parser.
+  CGDL parser.
 - Ensure the layout extension integrates seamlessly with the existing CGDL and
-game engine.
+  game engine.
 
 ## Tooling & Developer Experience
 
@@ -240,13 +238,13 @@ flows on the fly.
 **Deliverables:**
 
 - Extend the TUI console to act as a debug View client connecting to the
-Controller's administrative interface.
+  Controller's administrative interface.
 - Expose debug endpoints on the Controller to allow safe inspection and mutation
-of the underlying Model (game state) at runtime.
+  of the underlying Model (game state) at runtime.
 - Support crafting and injecting test protocol messages directly into the
-Controller's P2P network processing pipeline.
+  Controller's P2P network processing pipeline.
 - Expose connection management commands (initiate, disconnect, block) to
-simulate network disruptions and P2P topologies.
+  simulate network disruptions and P2P topologies.
 
 ### CGDL Language Server Protocol (LSP)
 
@@ -266,35 +264,35 @@ editor, making CGDL self-documenting and safe to write.
 **Deliverables:**
 
 - Research and document all standard capabilities specified in the
-Language Server Protocol (LSP) specification.
+  Language Server Protocol (LSP) specification.
 - Formulate a design strategy explaining how those capabilities will be utilized
-in the context of CGDL.
+  in the context of CGDL.
 - Audit and document existing features in the LSP codebase.
 - Establish a prioritized implementation roadmap, ranking features
-(e.g., autocomplete, hover tooltips) based on their importance to CGDL
-usage scenarios.
+  (e.g., autocomplete, hover tooltips) based on their importance to CGDL
+  usage scenarios.
 - Implement the prioritized LSP capabilities in the language server backend
-(`lsp_server` crate) using the CGDL parser.
+  (`lsp_server` crate) using the CGDL parser.
 - Build and package a VS Code extension that bundles and launches the Rust LSP
-executable.
+  executable.
 
 ## Cryptography & Zero-Knowledge Proofs (ZKP)
 
-::: danger
-
-TODO: not finalized
-
-Adjust for Connection & Message Authentication
-
-:::
-
-To support serverless card games, our project relies on distributed trust.
-Instead of relying on a trusted central authority or server to deal cards and
-maintain state secrets, we use cryptographic primitives and
-Zero-Knowledge Proofs (ZKPs).
-This ensures that players can hide their private hands, perform verifiable
-operations (such as shuffling or drawing), and prove their compliance with game
-rules without revealing any sensitive information.
+To enable trustless card gameplay in a decentralized peer-to-peer network
+without a central authority, the project relies on robust cryptographic
+foundations and Zero-Knowledge Proofs (ZKPs).
+These mechanisms solve two distinct security challenges: securing network
+communication and preserving game fairness.
+First, **Connection & Message Authentication** establishes cryptographic
+identity verification and packet signing to prevent impersonation, tampering,
+and replay attacks across untrusted transport routes.
+Second, mental card game primitives—implemented through a modular
+**Cryptographic Toolbox** and unified **Cryptographic Interface**—allow players
+to perform verifiable operations such as card masking, secret deals, and fair
+shuffles without exposing private hand information.
+Finally, **Protocol Integration** embeds these capabilities into an
+asynchronous Crypto Actor orchestrated by the Controller, ensuring that all game
+actions are mathematically verified before advancing the shared state machine.
 
 ### Connection & Message Authentication
 
@@ -338,18 +336,18 @@ the player identities.
 **Deliverables:**
 
 - Implement local generation and secure storage of peer key pairs, linking them
-to player identities.
+  to player identities.
 - Design and integrate a packet signing protocol.
-Every outgoing backend P2P message payload must be signed, and all incoming
-messages must be verified against the sender's public key before being processed
-by the game engine.
+  Every outgoing backend P2P message payload must be signed, and all incoming
+  messages must be verified against the sender's public key before being processed
+  by the game engine.
 - Incorporate replay prevention mechanisms (e.g., monotonic sequence numbers, timestamps, or nonce challenges) within the signed payload.
 - Implement a connection fingerprinting system
-(e.g., hashing peer public keys into a deterministic set of emojis, a structured
-Identicon, or a mnemonic string).
+  (e.g., hashing peer public keys into a deterministic set of emojis, a structured
+  Identicon, or a mnemonic string).
 - Expose the connection fingerprints on both the backend and frontend.
-Provide a UI component allowing players to inspect and compare connection
-fingerprints at any time.
+  Provide a UI component allowing players to inspect and compare connection
+  fingerprints at any time.
 
 ### Implementing the Toolbox
 
@@ -382,13 +380,13 @@ Heiko Stamer in
 **Deliverables:**
 
 - Research the foundational primitives described in
-*A Toolbox for Mental Card Games* (1998)
-and the improved implementations in
-*Efficient Electronic Gambling* (2005).
+  *A Toolbox for Mental Card Games* (1998)
+  and the improved implementations in
+  *Efficient Electronic Gambling* (2005).
 - Provide the implementation either as a native Rust crate written from scratch,
-or as a Rust FFI/wrapper around an existing C/C++ implementation like `libtmcg`.
+  or as a Rust FFI/wrapper around an existing C/C++ implementation like `libtmcg`.
 - Expose a clean, idiomatic Rust API that allows for verifiable deck and
-card operations.
+  card operations.
 
 ### Interface for Cryptography
 
@@ -415,11 +413,11 @@ deserialize cryptographic objects cleanly.
 **Deliverables:**
 
 - Define a set of Rust traits (e.g., in a `mcg-crypto` crate) representing core
-mental card game primitives, including key setup, card masking/unmasking,
-verifiable shuffles, and ZKP generation/verification.
+  mental card game primitives, including key setup, card masking/unmasking,
+  verifiable shuffles, and ZKP generation/verification.
 - Adapt existing implementations to conform to this new unified interface.
 - Provide a mock implementation of the traits, which is insecure, to simplify
-integration testing and speed up development of other components.
+  integration testing and speed up development of other components.
 
 ### Protocol Integration
 
@@ -452,22 +450,16 @@ decoupled from cryptographic protocol details.
 **Deliverables:**
 
 - Implement a dedicated **Crypto Actor** responsible for key management,
-card encryption/masking state, and ZKP generation/verification.
+  card encryption/masking state, and ZKP generation/verification.
 - Integrate the verification flow into the MVC Controller:
-intercept incoming network messages, request validation from the Crypto Actor,
-and forward the message to the game engine only upon successful verification.
+  intercept incoming network messages, request validation from the Crypto Actor,
+  and forward the message to the game engine only upon successful verification.
 - Implement the local action flow:
-mutate the local engine state, instruct the Crypto Actor to generate the
-necessary ZKP for the mutation, and broadcast the action and proof to the peer
-network.
+  mutate the local engine state, instruct the Crypto Actor to generate the
+  necessary ZKP for the mutation, and broadcast the action and proof to the peer
+  network.
 
 ## Network & Communication Infrastructure
-
-::: danger
-
-TODO: not finalized
-
-:::
 
 Since each player runs a local node, the network layer must manage
 peer connections, node discovery, and state synchronization.
@@ -475,12 +467,6 @@ A clean, asynchronous message pipeline is required to handle high-frequency
 communication between the frontend client, the local backend, and remote nodes.
 
 ### Reliable Broadcast & Consensus (Forum System)
-
-::: danger
-
-TODO: not finalized
-
-:::
 
 **The Problem:**
 
@@ -493,6 +479,10 @@ How to ensure that when one node broadcasts a state change, the entire mesh netw
 
 **Motivation:**
 
+In a decentralized peer-to-peer card game, no single server acts as the authoritative source of truth.
+When network latency fluctuates, packets drop, or players submit concurrent moves, nodes can easily fall out of synchronization or disagree on game history.
+A reliable broadcast and consensus protocol (the Forum System) guarantees that all connected peers observe actions in a deterministic order, validate or veto proposed state mutations consistently, and allow disconnected nodes to re-synchronize state upon reconnecting.
+
 **Deliverables:**
 
 - Research and design reliable broadcast and agreement strategies.
@@ -500,33 +490,16 @@ How to ensure that when one node broadcasts a state change, the entire mesh netw
 - Implement vector clocks or Lamport timestamps for ordering input sequences.
 - Specify and implement consensus state recovery plans.
 
-### More Communication Channels
-
-::: danger
-
-TODO: not finalized
-
-:::
-
-**The Problem:**
-
-**Motivation:**
-
-**Deliverables:**
-
 ### Decentralized Node Discovery
-
-::: danger
-
-TODO: not finalized
-
-:::
 
 **The Problem:**
 
 Players must be able to find and connect to each other globally without relying on a static, centralized discovery server.
 
 **Motivation:**
+
+To create a truly decentralized network that cannot be shut down or censored, players must discover each other dynamically without depending on static IP addresses or centralized discovery servers.
+Leveraging Iroh's peer-to-peer networking stack and Distributed Hash Table (DHT) enables nodes to advertise their presence, discover other participants using cryptographic node IDs, and establish direct peer connections through automatic NAT traversal and hole-punching.
 
 **Deliverables:**
 
@@ -535,74 +508,166 @@ Players must be able to find and connect to each other globally without relying 
 
 ## Project Deployment
 
-### Desktop Applicatoin
+Moving Mental Card Games from a development and research prototype to a widely
+accessible platform requires straightforward, turnkey packaging solutions.
+Currently, running the game requires a developer environment, CLI commands, and
+manual orchestration across multiple terminal windows.
+To deliver a frictionless user experience across diverse form factors, the
+milestones below focus on packaging the complete node (backend and frontend)
+into single-click desktop applications, wrapping the system into installable
+mobile apps for Android and iOS, streamlining local network backend deployment
+for seamless cross-device play, and hosting public WebAssembly demonstrators.
 
-::: danger
-
-TODO: not finalized
-
-:::
+### Desktop Application
 
 **The Problem:**
 
+Currently, playing MCG on a desktop computer requires manual orchestration.
+Users must compile or serve the WebAssembly frontend, start the native backend
+service (`native_mcg`) from a command-line interface, and manually open a web
+browser pointing to `http://localhost:3000`.
+This multi-step workflow prevents non-technical players from launching the game
+and lacks standard desktop integration (such as an application launcher icon,
+dedicated window lifecycle, or native file handling).
+
 **Motivation:**
 
+Players expect a conventional desktop application experience: a standalone
+program that launches with a simple double-click.
+In this milestone, students develop a native desktop frontend that runs natively
+on a computer instead of within a web browser.
+The desktop application packages both the backend node and the frontend GUI
+into a single self-contained executable.
+When launched, it automatically initializes and manages the backend service
+internally and connects the native GUI to it, requiring no additional setup or
+terminal commands for the user.
+
 **Deliverables:**
+
+- Implement a native desktop frontend capable of rendering locally on the host
+  operating system outside of a web browser.
+- Bundle both the backend node runtime and the frontend GUI into a single
+  standalone executable.
+- Ensure the application launches in a fully playable state via a simple
+  mouse double-click without requiring external commands or manual steps.
+- Automate the internal connection lifecycle so the desktop frontend spawns,
+  connects to, and gracefully shuts down the embedded backend service.
+- Provide build configurations and packaging scripts to produce native binaries
+  and installers for standard desktop platforms (Linux, Windows, macOS).
 
 ### Mobile Application
 
-::: danger
-
-TODO: not finalized
-
-:::
-
 **The Problem:**
+
+Card games are inherently social and portable, making mobile devices (smartphones
+and tablets) an ideal platform.
+However, MCG currently lacks mobile packaging.
+Running the game on mobile operating systems presents unique hurdles: users
+cannot run developer terminal environments, mobile operating systems impose
+strict process lifecycles and background restrictions, and mobile web browsers
+offer a sub-optimal experience compared to dedicated apps.
 
 **Motivation:**
 
+Like the desktop application, the goal is to provide a single, installable app
+bundle for Android and/or iOS that contains both the frontend and the backend.
+Users should be able to tap an icon on their home screen and immediately play
+without launching secondary services.
+A recommended, pragmatic implementation strategy is to wrap the frontend in a
+dedicated webview or specialized kiosk browser that displays the WASM frontend
+while automatically launching the Rust backend locally in the background.
+Packaging this architecture requires minimal boilerplate around the browser
+view.
+Alternatively, cross-platform Rust GUI frameworks with native mobile support
+(such as [Dioxus](https://dioxuslabs.com/)) can be explored as alternative
+frontends to simplify mobile rendering and packaging.
+
 **Deliverables:**
+
+- Package MCG as a native mobile application for Android and/or iOS.
+- Bundle both the Rust backend and the mobile frontend into a single installable
+  package that requires no additional user intervention to start.
+- Implement the client interface either as an embedded browser shell wrapping the
+  existing WASM frontend or via a mobile-friendly GUI framework like Dioxus.
+- Automatically start and manage the local backend service during the mobile
+  application lifecycle.
+- Handle mobile lifecycle events (app pausing, backgrounding, sleeping, and
+  resuming) without disrupting active P2P connections or corrupting game state.
+- Provide build and packaging scripts to generate deployable mobile artifacts
+  (e.g., APKs or iOS application bundles).
 
 ### Deployment Ready Backend
 
-::: danger
-
-TODO: not finalized
-
-:::
-
 **The Problem:**
 
-Difficult to connect from a third device to the backend.
+Connecting a secondary device (such as a smartphone or another computer on the
+local network) to a backend running on a host PC is currently fraught with
+difficulties.
+By default, the backend may bind only to localhost (`127.0.0.1`), rendering it
+inaccessible to other devices.
+Even when configured to listen on all interfaces (`0.0.0.0`), operating system
+firewalls (such as Windows Defender Firewall or Linux `ufw`) routinely block
+inbound network traffic unless an explicit rule is configured, and identifying
+the PC's local LAN IP address requires technical command-line utilities.
 
 **Motivation:**
 
+Players should be able to launch the backend on their PC and effortlessly
+connect to it from their mobile phone or secondary device on the local network.
+The backend must handle all network configuration automatically in code wherever
+feasible—such as binding to all interfaces and detecting and printing the local
+LAN IP address.
+For system requirements that cannot be automated via code, clear, step-by-step
+instructions must be provided so that players can complete the setup without
+confusion.
+
 **Deliverables:**
 
-### Backend inside frontend
+- Adapt the backend configuration and network initialization to bind across all
+  network interfaces (`0.0.0.0`) by default or via a dedicated deployment flag.
+- Automatically detect the host's active local LAN IP address and display ready-to-use
+  connection URLs (or render a scannable QR code in the terminal or GUI) for instant
+  mobile pairing.
+- Implement automated system configuration where technically feasible (e.g.,
+  firewall rule scripts or UPnP configuration helpers).
+- Write a step-by-step user guide detailing manual operating system adjustments
+  that cannot be automated in code.
+- Test and verify cross-device connectivity between mobile clients and the PC
+  backend across local Wi-Fi networks.
 
-::: danger
-
-TODO: not finalized
-
-:::
+### Serving a Demo Website
 
 **The Problem:**
 
-**Motivation:**
-
-**Deliverables:**
-
-### Serving a demo website
-
-::: danger
-
-TODO: not finalized
-
-:::
-
-**The Problem:**
+Prospective players, reviewers, and contributors currently have no way to
+explore or test MCG without cloning the repository, installing the Rust toolchain,
+and compiling both the frontend and backend locally.
+This steep barrier to entry limits user engagement and prevents quick public
+demonstrations.
 
 **Motivation:**
 
+Hosting the compiled WebAssembly frontend on a public static host—such as
+GitHub Pages or directly within the official documentation site
+(`mentalcardgames.github.io`)—enables instant accessibility for anyone with a web
+browser.
+On this demo page, players simply enter the public IP address or hostname of
+an accessible backend node (whether self-hosted at home, on a VPS, or running in
+a cloud environment).
+The browser-based frontend then connects directly to that backend over a
+WebSocket, allowing players to join and participate in an active game session
+immediately.
+
 **Deliverables:**
+
+- Set up an automated build and deployment pipeline (e.g., GitHub Actions) to
+  compile the WASM frontend and host it statically on GitHub Pages or as a subpage
+  of `mentalcardgames.github.io`.
+- Implement a connection configuration screen on the web frontend where players
+  can input an external backend IP address or domain name and port.
+- Establish WebSocket communication from the statically hosted frontend to the
+  remote backend, accounting for browser security policies (such as `ws://` vs
+  `wss://` mixed-content rules and providing guidelines for reverse proxies with
+  TLS termination).
+- Document backend deployment prerequisites for public internet exposure,
+  including router port forwarding, dynamic DNS, and TLS certificates.

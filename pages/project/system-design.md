@@ -13,12 +13,12 @@ the codebase.
 By exploring this page, you will find:
 
 * **Detailed explanations** of important software pattern and paradigm used in
-the project.
+  the project.
 * **Structural models and diagrams** illustrating how components interact with
-eachother if appropriate.
+  eachother if appropriate.
 * **The rationale behind key decisions** (such as security boundaries,
-decentralization, and dependency management) to help you gain a strong
-intuition for the system.
+  decentralization, and dependency management) to help you gain a strong
+  intuition for the system.
 
 ::: warning
 These paradigms guide current and future work.
@@ -41,14 +41,22 @@ a **Frontend** for visualization and a **Backend** for computation.
 This division ensures a clean separation of concerns and forms the foundation
 of our local node architecture.
 
-::: danger
-TODO: Insert here a small diagramm of five players connected in a ring together.
-Each player is a "split" node.
-The frontend of each player is one normal node and connected to the backend.
-The backend of each player is one normal node as well.
-Only the backend nodes have connections to other players in the ring.
-There should be an oval over each frontend and backend pair.
-:::
+```mermaid
+flowchart TB
+    subgraph P1 ["Player 1"]
+        F1["Frontend"] <--> B1["Backend"]
+    end
+    subgraph P2 ["Player 2"]
+        F2["Frontend"] <--> B2["Backend"]
+    end
+    subgraph P3 ["Player 3"]
+        F3["Frontend"] <--> B3["Backend"]
+    end
+
+    B1 <-->|P2P| B2
+    B2 <-->|P2P| B3
+    B3 <-->|P2P| B1
+```
 
 ### WASM Frontend
 
@@ -66,15 +74,15 @@ While traditional web visuals are structured using HTML and CSS, WebAssembly is
 a compelling alternative for multiple reasons.
 
 * **Direct Canvas Control:**
-The `<canvas>` is completely controlled and drawn onto by the WebAssembly
-binary, bypassing standard DOM layout overhead.
+  The `<canvas>` is completely controlled and drawn onto by the WebAssembly
+  binary, bypassing standard DOM layout overhead.
 * **Minimal HTML Footprint:**
-We serve a very lean HTML file containing a single `<canvas>` element.
+  We serve a very lean HTML file containing a single `<canvas>` element.
 * **Single-Language Codebase:**
-Since Rust has first-class support for compiling to WASM, the HTML canvas is
-ultimately controlled entirely from Rust.
-This allows the entire project to be written in a single language, enabling
-seamless data-type sharing and reducing development complexity.
+  Since Rust has first-class support for compiling to WASM, the HTML canvas is
+  ultimately controlled entirely from Rust.
+  This allows the entire project to be written in a single language, enabling
+  seamless data-type sharing and reducing development complexity.
 
 ### Native Backend
 
@@ -95,31 +103,31 @@ execution.
 It divides responsibilities into three distinct roles:
 
 * **Model:**
-Responsible solely for managing the application data.
-It provides the set of instructions and rules applied to the data, guaranteeing
-that the state always remains consistent.
+  Responsible solely for managing the application data.
+  It provides the set of instructions and rules applied to the data, guaranteeing
+  that the state always remains consistent.
 * **View:**
-Responsible for displaying an interface representing the data and detecting
-user input.
+  Responsible for displaying an interface representing the data and detecting
+  user input.
 * **Controller:**
-Sits in between both the Model and the View and mediates between them.
-The View notifies the Controller about user input, which is then translated
-into the correct instruction for the Model.
-Conversely, the Model notifies the Controller about changes to the data, which
-are then relayed back to the View.
+  Sits in between both the Model and the View and mediates between them.
+  The View notifies the Controller about user input, which is then translated
+  into the correct instruction for the Model.
+  Conversely, the Model notifies the Controller about changes to the data, which
+  are then relayed back to the View.
 
 <div align="center">
 
 ```mermaid
 flowchart LR
-    View(["View"])
-    Controller(["Controller"])
-    Model(["Model"])
+  View(["View"])
+  Controller(["Controller"])
+  Model(["Model"])
 
-    View --> Controller
-    Controller --> View
-    Controller --> Model
-    Model --> Controller
+  View --> Controller
+  Controller --> View
+  Controller --> Model
+  Model --> Controller
 ```
 
 </div>
@@ -184,9 +192,9 @@ The planned Controller will execute a continuous step-by-step event loop:
 
 1. It blocks on the incoming MPSC channel, waiting for message packets.
 2. It dequeues a message, identifies the actor, and applies the logic to the
-Model.
+   Model.
 3. It updates the state, formats state projections, and sends them to all peers
-as defined by protocols.
+   as defined by protocols.
 
 ## Breaking Cyclic-Dependencies Pattern
 
@@ -194,13 +202,13 @@ To maintain code health and rapid build times in a Rust workspace, we enforce
 strict compilation boundaries to break compilation cycles.
 
 * **Shared Abstraction Layer:**
-To prevent the `frontend` and the `native_mcg` backend from relying on circular
-imports, we extract all core interfaces, domain objects, and communication
-enums into a standalone `shared` crate.
+  To prevent the `frontend` and the `native_mcg` backend from relying on circular
+  imports, we extract all core interfaces, domain objects, and communication
+  enums into a standalone `shared` crate.
 * **Uni-directional Graph:**
-Both backend and frontend depend solely on the `shared` crate.
-The `shared` crate depends on absolutely nothing in the workspace, ensuring a
-clean, compilation-friendly directed acyclic graph (DAG).
+  Both backend and frontend depend solely on the `shared` crate.
+  The `shared` crate depends on absolutely nothing in the workspace, ensuring a
+  clean, compilation-friendly directed acyclic graph (DAG).
 
 ## Common Interface Pattern
 
@@ -208,11 +216,11 @@ To preserve structural safety across different execution environments, all data
 flowing across boundaries must conform to contract-bound interface enums.
 
 * **Shared Core Datatypes:**
-We share identical, serialized enums across our WebAssembly browser runtime and
-the native Rust desktop runtime.
+  We share identical, serialized enums across our WebAssembly browser runtime and
+  the native Rust desktop runtime.
 * **Contract-Bound Sockets:**
-All message streams (local WebSockets, remote P2P, CLI streams) are strictly
-bound to identical enums defined in the `shared` crate:
+  All message streams (local WebSockets, remote P2P, CLI streams) are strictly
+  bound to identical enums defined in the `shared` crate:
   * `Frontend2BackendMsg`: Sent from the frontend to the local backend.
   * `Backend2FrontendMsg`: Broadcast from the backend to connected frontends.
   * `Peer2PeerMsg`: Distributed across backend peer-to-peer nodes.
