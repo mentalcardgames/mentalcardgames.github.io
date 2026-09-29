@@ -62,11 +62,18 @@ from the root Cargo workspace (`exclude = ["crates/frontend"]` in `Cargo.toml`).
 
 Frontend artifacts are built independently using `wasm-pack` via
 `just build [PROFILE]`.
-Frontend linting and formatting can be verified separately:
+Frontend linting, formatting, and tests can be verified using `just`:
 
 ```shell
-cargo fmt --manifest-path crates/frontend/Cargo.toml
-cargo clippy --manifest-path crates/frontend/Cargo.toml --target wasm32-unknown-unknown
+just fmt-check frontend   # Check formatting
+just fmt frontend         # Apply formatting
+just clippy frontend      # Run Clippy targeting wasm32
+just test frontend        # Run browser tests in headless Chrome
+
+# Or with manual cargo and wasm-pack commands:
+cargo fmt --manifest-path crates/frontend/Cargo.toml -- --check
+cargo clippy --manifest-path crates/frontend/Cargo.toml --target wasm32-unknown-unknown --all-targets -- -D warnings
+wasm-pack test --headless --chrome crates/frontend
 ```
 
 ## Architecture & API

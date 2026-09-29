@@ -143,6 +143,22 @@ Run these from your root workspace:
 
   This command builds the frontend in development mode and launches the native backend server (serving on port 3000+).
 
+- **Full CI/CD Verification Gate:**
+
+  ```shell
+  just ci                 # Runs format check, clippy, and tests across all crates (including frontend)
+  just ci [CRATE]         # Runs full gate on a specific crate (e.g. `just ci frontend` or `just ci poker`)
+  ```
+
+- **Clippy, Formatting & Testing:**
+
+  ```shell
+  just clippy [CRATE]     # Run Clippy (defaults to all crates + frontend; accepts crate aliases)
+  just fmt-check [CRATE]  # Check formatting without modifying files (alias: check-fmt)
+  just fmt [CRATE]        # Automatically format files (alias: format)
+  just test [CRATE]       # Run workspace unit/integration tests and frontend browser tests
+  ```
+
 ## 3. Running the Documentation Website Locally
 
 The documentation website is powered by [VitePress](https://vitepress.dev/).
@@ -315,29 +331,48 @@ main entry file (e.g., `crates/native_mcg/src/lib.rs`,
 To maintain codebase health and ease peer code reviews, all Pull Requests
 into main must respect the following rules:
 
-- **Strict Code Formatting:**
-  Run `cargo fmt` before staging changes:
-
-   ```shell
-   cargo fmt --all
-
-   # For the frontend
-   cargo fmt --manifest-path crates/frontend/Cargo.toml
-   ```
-
-- **Compiler Warnings as Errors:**
-  Your code must compile without clippy warnings. Run:
+- **Run Full CI Verification Gate:**
+  Before pushing or opening a PR, ensure the entire gate passes:
 
   ```shell
+  just ci                 # Format check, clippy, and tests across all crates + frontend
+  just ci [CRATE]         # Full gate for a specific crate (e.g. `just ci frontend`)
+  ```
+
+- **Strict Code Formatting:**
+  Check or apply rustfmt before staging changes:
+
+  ```shell
+  just fmt-check          # Check formatting across all crates (alias: check-fmt)
+  just fmt                # Automatically format all crates (alias: format)
+
+  # Manual cargo commands:
+  cargo fmt --all -- --check
+  cargo fmt --manifest-path crates/frontend/Cargo.toml -- --check
+  ```
+
+- **Compiler Warnings as Errors:**
+  Your code must compile without clippy warnings (`-D warnings`):
+
+  ```shell
+  just clippy             # Lints all workspace crates + frontend (wasm32)
+  just clippy frontend    # Lints frontend only
+
+  # Manual cargo commands:
   cargo clippy --workspace --all-targets -- -D warnings
-  cargo clippy --manifest-path crates/frontend/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+  cargo clippy --manifest-path crates/frontend/Cargo.toml --target wasm32-unknown-unknown --all-targets -- -D warnings
   ```
 
 - **Verify Tests:**
-  Ensure all unit and integration tests succeed:
+  Ensure all unit, integration, and browser tests succeed:
 
   ```shell
+  just test               # Runs workspace tests + frontend browser tests in headless Chrome
+  just test frontend      # Runs frontend tests using wasm-pack test
+
+  # Manual cargo & wasm-pack commands:
   cargo test --workspace
+  wasm-pack test --headless --chrome crates/frontend
   ```
 
 - **Branch-Based Workflow:**
