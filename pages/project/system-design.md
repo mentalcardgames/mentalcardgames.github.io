@@ -225,6 +225,108 @@ flowing across boundaries must conform to contract-bound interface enums.
   * `Backend2FrontendMsg`: Broadcast from the backend to connected frontends.
   * `Peer2PeerMsg`: Distributed across backend peer-to-peer nodes.
 
+## Builder and Handle Pattern
+
+To decouple component configuration, lifecycle management, and runtime
+communication across asynchronous and synchronous execution boundaries, the
+backend applies the **Builder** and **Handle** patterns.
+
+```mermaid
+flowchart
+    subgraph ConfigPhase ["1. Configuration and Instantiation"]
+        direction TB
+        Builder["ComponentBuilder (e.g. BackendBuilder)"]
+        ActiveComp["Active Runtime Component (Supervisor, Controller Thread)"]
+        CloneHandle["Cloneable Handle (e.g. ControllerHandle, NetworkHandle)"]
+        Builder -->|"build() or spawn()"| ActiveComp
+        Builder -->|"creates"| CloneHandle
+    end
+
+    subgraph RuntimePhase ["2. Runtime Communication"]
+        direction TB
+        CallerA["Network Actors"]
+        CallerB["Bot Driver"]
+        CallerC["Axum Route Handlers"]
+        RuntimeHandle["Cloneable Handle (ControllerHandle, NetworkHandle)"]
+        RuntimeComponent["Active Runtime Component (Supervisor, Controller Thread)"]
+
+        CallerA -->|"send_network_event()"| RuntimeHandle
+        CallerB -->|"send_bot_action()"| RuntimeHandle
+        CallerC -->|"register / commands"| RuntimeHandle
+        RuntimeHandle -->|"typed MPSC channel"| RuntimeComponent
+    end
+```
+
+### The Builder Pattern
+
+Constructing backend subsystems involves complex configuration:
+discovering and binding network ports, sizing bounded channel buffers,
+resolving file paths, specifying connection timeouts, and injecting mock
+network connectors for testing.
+
+**Fluent Configuration via `with_*` Methods:**
+Builders provide a chainable, ergonomic configuration API following idiomatic
+Rust conventions.
+Initialized with sensible defaults via `new(...)`, optional parameters and
+environmental overrides are applied fluently via `with_*` methods
+(e.g., `with_port()`, `with_channel_capacity()`, or `with_iroh_connector()`).
+These methods consume and return ownership of `mut self`, guaranteeing
+compile-time immutability once the builder is finalized by `build()` or `spawn()`.
+
+**Staged Lifecycle (`build()` vs. `spawn()`):**
+
+- `build()`:
+Resolves system resources (such as scanning for available ports or verifying
+strict port availability), allocates internal communication channels, and
+initializes state structures without launching background tasks or threads.
+- `spawn()`:
+Starts the background Tokio tasks (`NetworkSupervisor`, bot driver) or
+dedicated OS threads (`ControllerRunner`), returning the active runtime handles
+and task join guards.
+
+**Deterministic Resource Resolution:**
+Resource discovery (such as scanning ports for an available socket) occurs
+during the build phase before tasks start, avoiding race conditions during
+startup.
+
+**Ergonomics & Test Isolation:**
+Test suites can easily customize buffer sizes, bind to ephemeral port `0`,
+disable bot drivers, or inject in-memory transport connectors without mutating
+configuration files on disk.
+
+### Function of Handlers
+
+In our hybrid execution model, the central synchronous controller and the
+asynchronous network supervisor must not expose mutable shared state
+(`Arc<Mutex<T>>`) across thread or task boundaries.
+Instead, communication and control are delegated to **Handlers**.
+
+A **Handle** (such as `ControllerHandle`, `NetworkHandle`, or `BackendHandle`)
+is a lightweight, cloneable proxy created during the build step.
+Its primary functions are:
+
+**Message-Passing Abstraction:**
+The handle encapsulates the sender half of internal MPSC (Multi-Producer,
+Single-Consumer) or watch channels.
+Instead of exposing raw channel primitives, it provides an ergonomic,
+strongly-typed API (e.g., `send_network_event()`, or `send_bot_action()`).
+
+**Crossing Execution Boundaries:**
+Handles allow asynchronous Tokio tasks to safely communicate with the
+synchronous `Controller` OS thread without locks, mutex contention, or 
+cross-runtime blocking.
+
+**Safe Concurrent Sharing:**
+Handles implement `Clone + Send + Sync`.
+Any number of network connection actors, background services, or HTTP/WebSocket
+handlers can hold independent clones of the handle without contending for a
+central lock.
+
+**Orderly Lifecycle Control:**
+Handles provide dedicated shutdown hooks (such as `handle.shutdown().await`),
+coordinating clean disconnection across actors, listeners, and the controller
+thread.
+
 ## Component Interaction Diagram
 
 The following diagram illustrates the component structure in the workspace,
