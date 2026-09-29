@@ -230,6 +230,16 @@ to shut down its connection actors, and the owned supervisor and adapter tasks
 are joined. Owned task handles also abort their tasks if router state is
 dropped unexpectedly.
 
+### Multi-Instance Local Testing (P2P / Lobby)
+
+To test peer-to-peer lobby connection and QR-code scanning locally on the same development machine:
+
+- **Automatic Port Fallback**: If port 3000 is occupied, subsequent backend instances automatically bind to 3001, 3002, etc.
+- **Node ID Independence**: By default, each backend loads `mcg-server.toml` which contains a persisted `iroh_key`. If two backend instances share this file, both have the identical Node ID, and P2P connection attempts will fail with `NetworkError::LocalEndpoint`.
+- **Solutions**:
+  - **Ephemeral Mode**: Run with `--ephemeral` (`just backend --ephemeral`). The node generates a random secret key in memory and avoids persisting or reading `iroh_key` from disk.
+  - **Separate Configurations**: Run with `--config <FILE>` (e.g. `just backend --config mcg-server-2.toml --port 3001`). This persists separate keys for each node.
+
 ## Browser Assets and Routes
 
 The Axum router serves:
